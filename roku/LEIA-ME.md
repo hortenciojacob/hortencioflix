@@ -1,4 +1,16 @@
-# Hortêncioflix para Roku — v0.17
+# Hortêncioflix para Roku — v0.18
+
+## Novidades da v0.18
+
+- **Modo ambiente com OK para ver**: com a app parada (5 min por defeito), passam as imagens dos teus filmes e séries; **OK** abre o que está a passar e começa a ver, **▶** passa ao seguinte, Voltar sai. Definições › «Modo ambiente»: 3, 5 ou 10 min, ou desligado. (A proteção de ecrã da própria Roku continua a não aceitar teclas — por isso o modo ambiente aparece antes dela.)
+
+**Auditoria, 3.ª parte — página do título**
+- **Continuar uma série** sem conta Stremio: segue a partir do último episódio marcado como visto neste aparelho (antes voltava ao 1.º episódio).
+- **«Ver» mais rápido**: as legendas já não seguram o arranque mais de 5 s; se chegarem tarde, o leitor procura-as e junta-as sozinho.
+- **Escolher uma fonte**: se falhar, há sempre alternativas (as seguintes, as anteriores e as escondidas pelos filtros), mesmo escolhendo a última da lista.
+- Temporizadores da app ligados à cena (garante que os lembretes e o TorBox são verificados).
+
+# v0.17
 
 ## Novidades da v0.17
 

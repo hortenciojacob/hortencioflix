@@ -407,6 +407,14 @@ function findTargetEpisode() as dynamic
             end if
         end for
     end if
+    ' sem progresso nem conta: continua a seguir ao último episódio marcado como visto neste aparelho
+    seen = watchedFor(strOr(it.id))
+    last = -1
+    for i = 0 to m.flatEps.Count() - 1
+        ep = m.flatEps[i]
+        if seen.DoesExist(ep.s.ToStr() + ":" + ep.e.ToStr()) then last = i
+    end for
+    if last >= 0 and last + 1 < m.flatEps.Count() then return m.flatEps[last + 1]
     if m.flatEps.Count() > 0 then return m.flatEps[0]
     return invalid
 end function
@@ -460,8 +468,8 @@ end sub
 ' «Enviar para a TV» (a partir do telemóvel): começa logo a reproduzir, com o episódio pedido
 sub maybeAutoPlay()
     it = m.top.item
-    if it = invalid or m.autoPlayDone = true then return
-    if it.autoPlay <> true then return
+    if it = invalid or boolOr(m.autoPlayDone) then return
+    if not boolOr(it.autoPlay) then return
     m.autoPlayDone = true
     vid = strOr(it.autoVideo)
     ep = m.targetEp
@@ -741,6 +749,17 @@ sub startQuick(ep as dynamic)
     reuse = m.prefetching and m.preId = id and nowSecs() - m.preAt < 600
     m.prefetching = false
     m.quick = true
+    ' as legendas não podem atrasar o «Ver» mais de 5 s (o leitor procura-as depois, se faltarem)
+    if m.subWait = invalid
+        m.subWait = CreateObject("roSGNode", "Timer")
+        m.subWait.duration = 5
+        m.subWait.repeat = false
+        m.subWait.observeField("fire", "onQuickSubWait")
+        m.top.appendChild(m.subWait)
+    end if
+    m.subWait.duration = 5
+    m.subWait.control = "stop"
+    m.subWait.control = "start"
     setMode("loading")
     m.section.text = "Reproduzir" + epLabel(ep)
     m.section.visible = true
@@ -802,6 +821,11 @@ sub quickFromResult(res as object)
             setStatus("Ainda nenhuma fonte está pronta no teu serviço debrid. Escolhe uma (download) para começar a descarregar e volta daqui a alguns minutos.")
         else if m.subsDone
             quickLaunch()
+        else
+            ' fontes prontas, legendas ainda não: espera no máximo mais 2,5 s
+            m.subWait.duration = 2.5
+            m.subWait.control = "stop"
+            m.subWait.control = "start"
         end if
     end if
 end sub
@@ -974,10 +998,23 @@ sub playStream(sel as integer)
     for each ep in m.flatEps
         eps.Push({ id: ep.id, label: ep.label })
     end for
-    alts = []
-    for i = sel to m.streams.Count() - 1
-        if alts.Count() < 30
-            x = m.streams[i]
+    ' alternativas se a escolhida falhar: primeiro as da lista (filtrada) a seguir, depois as de cima,
+    ' e por fim as que os filtros esconderam — nunca fica sem reserva por ter escolhido a última
+    alts = [altOf(s)]
+    used = {}
+    used[strOr(s.url)] = true
+    order = []
+    for i = sel + 1 to m.streams.Count() - 1
+        order.Push(m.streams[i])
+    end for
+    for i = 0 to sel - 1
+        order.Push(m.streams[i])
+    end for
+    if m.allStreams <> invalid then order.Append(m.allStreams)
+    for each x in order
+        u = strOr(x.url)
+        if alts.Count() < 30 and not used.DoesExist(u)
+            used[u] = true
             alts.Push(altOf(x))
         end if
     end for
@@ -998,7 +1035,8 @@ sub playStream(sel as integer)
         epIndex: epIndex,
         alts: alts,
         altIndex: 0,
-        animated: isAnimatedMeta(m.meta)
+        animated: isAnimatedMeta(m.meta),
+        subsId: subsIdIfMissing(videoId)
     }
 end sub
 
@@ -1516,3 +1554,22 @@ sub onNewList()
         reportCrash("DetailsScreen.onNewList", e)
     end try
 end sub
+
+sub onQuickSubWait()
+    try
+        if m.quick and m.streamsDone and not m.subsDone
+            m.subsDone = true
+            m.subsLate = true
+            quickLaunch()
+        end if
+    catch e
+        reportCrash("DetailsScreen.onQuickSubWait", e)
+    end try
+end sub
+
+' Sem legendas ainda (demoraram): o leitor procura-as sozinho e junta-as quando chegarem
+function subsIdIfMissing(videoId as string) as string
+    if m.subs <> invalid and type(m.subs) = "roArray" and m.subs.Count() > 0 then return ""
+    if Left(videoId, 2) <> "tt" then return ""
+    return videoId
+end function

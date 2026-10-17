@@ -297,7 +297,11 @@ sub prepare(startPos as integer)
     else if subs <> invalid and type(subs) = "roArray" and subs.Count() > 0
         m.waitSubs = true
         m.subTask = startAddonTask({ kind: "dlsubs", items: subs }, "onSubsReady")
-    else if m.md.autoSubFind <> invalid and m.md.autoSubFind = true
+    else if strOr(m.md.subsId) <> ""
+        ' as legendas não chegaram a tempo na página do título: procura-as aqui
+        m.waitSubs = true
+        m.subTask = startAddonTask({ kind: "subtitles", type: strOr(m.md.metaType), id: strOr(m.md.subsId) }, "onSubFound")
+    else if boolOr(m.md.autoSubFind)
         q = strOr(m.md.subQuery)
         if q = "" then q = strOr(m.md.title)
         m.waitSubs = true

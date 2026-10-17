@@ -18,6 +18,7 @@ sub init_x()
         m.guardTimer = CreateObject("roSGNode", "Timer")
         m.guardTimer.duration = 4
         m.guardTimer.observeField("fire", "onGuardNotice")
+        m.top.appendChild(m.guardTimer)
         m.guardTimer.control = "start"
     end if
     g.accent = ""
@@ -59,12 +60,21 @@ sub init_x()
     m.tbTimer.duration = 600
     m.tbTimer.repeat = true
     m.tbTimer.observeField("fire", "onTbTimer")
+    m.top.appendChild(m.tbTimer)
     m.tbTimer.control = "start"
+    ' modo ambiente: com a app parada, as imagens dos teus títulos; OK começa a ver o que está a passar
+    m.ambTimer = CreateObject("roSGNode", "Timer")
+    m.ambTimer.duration = 20
+    m.ambTimer.repeat = true
+    m.ambTimer.observeField("fire", "onAmbTimer")
+    m.top.appendChild(m.ambTimer)
+    m.ambTimer.control = "start"
     ' lembretes de programas (TV ao vivo): verifica a cada 30 s
     m.remTimer = CreateObject("roSGNode", "Timer")
     m.remTimer.duration = 30
     m.remTimer.repeat = true
     m.remTimer.observeField("fire", "onRemTimer")
+    m.top.appendChild(m.remTimer)
     m.remTimer.control = "start"
     if cfgRead("torboxKey", "") <> "" then m.tbTask = startAddonTask({ kind: "tbme", key: cfgRead("torboxKey", "") }, "onTbMe")
 
@@ -899,5 +909,55 @@ sub onRemDialog()
         end if
     catch e
         reportCrash("MainScene.onRemDialog", e)
+    end try
+end sub
+
+' ---------- Modo ambiente (dentro da app, aceita o comando) ----------
+
+sub onAmbTimer()
+    try
+        mins = Int(Val(cfgRead("ambientMin", "5")))
+        if mins <= 0 or m.ambient <> invalid then return
+        if m.player <> invalid then return
+        if m.top.dialog <> invalid then return
+        idle = CreateObject("roDeviceInfo").TimeSinceLastKeypress()
+        if idle < mins * 60 then return
+        a = CreateObject("roSGNode", "AmbientView")
+        a.interactive = true
+        a.observeField("chosen", "onAmbChosen")
+        a.observeField("dismiss", "onAmbDismiss")
+        m.ambient = a
+        m.top.appendChild(a)
+        a.setFocus(true)
+    catch e
+        reportCrash("MainScene.onAmbTimer", e)
+    end try
+end sub
+
+sub closeAmbient()
+    if m.ambient = invalid then return
+    m.top.removeChild(m.ambient)
+    m.ambient = invalid
+    focusTopScreen()
+end sub
+
+sub onAmbDismiss()
+    try
+        closeAmbient()
+    catch e
+        reportCrash("MainScene.onAmbDismiss", e)
+    end try
+end sub
+
+sub onAmbChosen(event as object)
+    try
+        it = event.getData()
+        closeAmbient()
+        if it = invalid or strOr(it.id) = "" then return
+        mt = strOr(it.type)
+        if mt = "" then mt = "movie"
+        m.top.launchArgs = { contentId: strOr(it.id), mediaType: mt, title: strOr(it.name) }
+    catch e
+        reportCrash("MainScene.onAmbChosen", e)
     end try
 end sub

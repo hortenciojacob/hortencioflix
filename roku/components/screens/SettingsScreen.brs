@@ -139,6 +139,11 @@ sub render_x()
         m.actions.Push("qualAuto")
         items.Push("«A seguir» no fim do filme (sugestões nos créditos): " + yesNo(cfgRead("postPlay", "1")))
         m.actions.Push("postPlay")
+        am = cfgRead("ambientMin", "5")
+        aml = "ao fim de " + am + " min sem mexer"
+        if am = "0" then aml = "desligado"
+        items.Push("Modo ambiente (imagens dos filmes; OK para ver): " + aml)
+        m.actions.Push("ambientMin")
         items.Push("Fundo animado na página do título: " + yesNo(cfgRead("trailerAuto", "1")))
         m.actions.Push("trailerAuto")
         items.Push("Tema de cor: " + themeName())
@@ -267,6 +272,9 @@ sub onSelected_x()
         end if
     else if action = "qualAuto"
         cycle("qualAuto", ["ask", "auto", "off"], "ask")
+        render()
+    else if action = "ambientMin"
+        cycle("ambientMin", ["5", "3", "10", "0"], "5")
         render()
     else if action = "postPlay" or action = "trailerAuto"
         cycle(action, ["1", "0"], "1")

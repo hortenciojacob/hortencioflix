@@ -888,7 +888,8 @@ function probeUrl(url as string, headers as dynamic) as object
     ct = r.contentType
     bad = false
     reason = ""
-    if code = 404 or code = 410 or (code >= 500 and code < 600)
+    ' 405/501: o servidor só não aceita pedidos HEAD — o vídeo pode estar bom
+    if code = 404 or code = 410 or (code >= 500 and code < 600 and code <> 501)
         bad = true
         reason = "o servidor respondeu " + code.ToStr()
     else if (code = 200 or code = 206) and (Left(ct, 5) = "text/" or Instr(1, ct, "json") > 0)

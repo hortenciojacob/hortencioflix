@@ -47,6 +47,8 @@ sub init_x()
     m.sleepTimer = m.top.findNode("sleepTimer")
     m.graceTimer = m.top.findNode("graceTimer")
     m.subWaitTimer = m.top.findNode("subWaitTimer")
+    m.startDog = m.top.findNode("startDog")
+    m.startDog.observeField("fire", "onStartDog")
     m.subWaitTimer.observeField("fire", "onSubWait")
 
     accent = accentColor()
@@ -197,6 +199,11 @@ sub onMedia_x()
         m.autoTries = 0
         m.qdropDeclined = false
         resetEpisodeState()
+        ' «A seguir»: cada título novo volta a poder mostrar sugestões (e nunca as do filme anterior)
+        m.postDone = false
+        if m.recsFor <> strOr(m.md.metaId) then m.recs = invalid
+        if m.postPlay.visible then hidePostPlay()
+        m.chGuide.visible = false
     end if
     m.fromRetry = false
     m.started = false
@@ -435,6 +442,27 @@ sub startPlayback(curPos as integer, tracks as object)
     end if
     m.video.control = "play"
     if not m.menu.visible and not isMini() then m.video.setFocus(true)
+    ' vigia: se a fonte não começar a tempo, não ficar a carregar para sempre
+    m.startDog.duration = 45
+    if isLive() then m.startDog.duration = 25
+    m.startDog.control = "stop"
+    m.startDog.control = "start"
+end sub
+
+sub onStartDog()
+    try
+        if m.started or not m.attempting then return
+        if isLive()
+            m.attempting = false
+            m.video.control = "stop"
+            setStatus("O canal não respondeu. Experimenta outro (▲ ▼) ou volta mais tarde.")
+            logEvent("Canal sem resposta: " + cleanText(strOr(m.md.title)))
+            return
+        end if
+        sourceFailed("não respondeu em " + Int(m.startDog.duration).ToStr() + " s")
+    catch e
+        reportCrash("PlayerScreen.onStartDog", e)
+    end try
 end sub
 
 ' ---------- Estado do vídeo ----------
@@ -447,6 +475,7 @@ sub onState_x()
         return
     end if
     if st = "playing"
+        m.startDog.control = "stop"
         m.status.visible = false
         if not m.started and not isLive()
             logEvent("A tocar: " + cleanText(strOr(m.md.streamName)) + "  " + qualityText(currentQuality()))
@@ -471,6 +500,12 @@ sub onState_x()
             logEvent("Fonte saltada (" + kind + "): " + cleanText(strOr(m.md.streamName)))
             scoreCurrent(-3)
             tryNextSource()
+            return
+        end if
+        ' já estava a tocar e a ligação caiu: continua noutra fonte no mesmo ponto, sem diálogo
+        if m.started and not isLive() and kind <> "drm" and hasAltSource() and m.autoTries < 8
+            m.attempting = true
+            sourceFailed("erro a meio: " + kind)
             return
         end if
         setStatus("Erro de reprodução: " + strOr(m.video.errorMsg) + " (" + strOr(m.video.errorCode) + ")")
@@ -964,6 +999,11 @@ sub onClosing_x()
         end if
         m.countTimer.control = "stop"
         m.sleepTimer.control = "stop"
+        ' nenhum temporizador do leitor pode disparar depois de o fechar
+        m.startDog.control = "stop"
+        m.postTimer.control = "stop"
+        m.cgTimer.control = "stop"
+        m.attempting = false
         m.graceTimer.control = "stop"
         m.video.control = "stop"
         m.video.content = invalid
@@ -1101,12 +1141,18 @@ function isPlaceholder() as boolean
 end function
 
 sub sourceEmpty()
+    sourceFailed("terminou sem tocar")
+end sub
+
+' Uma fonte falhou (acabou sem imagem, não respondeu ou caiu a meio): tenta a seguinte no mesmo ponto
+sub sourceFailed(why as string)
     if m.started then saveLocal(false)
     ' caiu a meio: a próxima fonte continua no mesmo ponto, sem perguntar
     if m.started and m.video.position > 30 then m.qualResume = Int(m.video.position)
     clearGuard()
     scoreCurrent(-3)
-    logEvent("Fonte terminou sem tocar: " + cleanText(strOr(m.md.streamName)))
+    logEvent("Fonte falhou (" + why + "): " + cleanText(strOr(m.md.streamName)))
+    m.startDog.control = "stop"
     m.video.control = "stop"
     m.attempting = false
     m.started = false

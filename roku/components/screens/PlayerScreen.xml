@@ -75,6 +75,7 @@
         <Timer id="sleepTimer" duration="1800" repeat="false" />
         <Timer id="graceTimer" duration="60" repeat="false" />
         <Timer id="subWaitTimer" duration="3.5" repeat="false" />
+        <Timer id="startDog" duration="45" repeat="false" />
         <MenuPanel id="menu" />
     </children>
 </component>

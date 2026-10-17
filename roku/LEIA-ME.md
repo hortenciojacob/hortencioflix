@@ -2,6 +2,8 @@
 
 ## Novidades da v0.17
 
+- 0.17.4 (auditoria, 2.ª parte — leitor): uma fonte que fica a carregar mais de 45 s passa sozinha à seguinte (canais: aviso ao fim de 25 s); se a ligação cair a meio do filme, continua noutra fonte no mesmo ponto em vez de mostrar erro; o teste rápido do link já não descarta fontes boas de servidores que não aceitam esse teste; as sugestões «A seguir» já não repetem as do filme anterior; os temporizadores do leitor param ao fechar.
+
 - 0.17.3 (auditoria, 1.ª parte): tecla ▶ do comando num cartaz do Início abre e começa logo (no «Continuar a ver» continua o episódio certo); ▶ na página do título começa já; Voltar nas sugestões vai primeiro aos botões; o registo da Roku (pouco espaço) já não cresce sem limite (estatísticas das fontes e listas novas entram na limpeza automática); a sincronização bloqueia 10 minutos depois de 5 códigos errados.
 
 - 0.17.2: **animação dobrada** — nos desenhos animados e anime, as fontes dobradas em português vêm primeiro (também no «Ver» e no próximo episódio). Definições › «Animação: preferir dobrado»: Português (Portugal ou Brasil), só de Portugal, só do Brasil, ou não.

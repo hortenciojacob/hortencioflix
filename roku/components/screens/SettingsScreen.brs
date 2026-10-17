@@ -113,6 +113,11 @@ sub render_x()
         if rp = "off" then rl = "Indiferente"
         items.Push("Preferir imagem: " + rl)
         m.actions.Push("rangePref")
+        nh = homeHidden().Count()
+        hl = "escolher filas e ordem"
+        if nh > 0 then hl = nh.ToStr() + " fila(s) escondida(s)"
+        items.Push("Organizar o Início: " + hl)
+        m.actions.Push("homeLayout")
         items.Push("Saltar introdução automaticamente: " + yesNo(cfgRead("autoSkip", "0")))
         m.actions.Push("autoSkip")
         items.Push("«A seguir» no fim do filme (sugestões nos créditos): " + yesNo(cfgRead("postPlay", "1")))
@@ -234,6 +239,8 @@ sub onSelected_x()
     else if action = "audioLang"
         cycle("audioLang", ["any", "pt", "en", "es", "fr", "it"], "any")
         render()
+    else if action = "homeLayout"
+        openHomeLayout(0)
     else if action = "postPlay" or action = "trailerAuto"
         cycle(action, ["1", "0"], "1")
         render()
@@ -504,6 +511,40 @@ sub openProfileMenu()
     openMenu(m.menu, "profiles", "Perfis", items, 0)
 end sub
 
+' Organizar o Início: cada fila mostra ✓ (visível) ou ✗ (escondida); escolher troca. No fim: mover para o topo / repor.
+sub openHomeLayout(focus as integer)
+    known = homeKnown()
+    if known.Count() = 0
+        showMessage("Organizar o Início", "Abre primeiro o Início para a app conhecer as filas.")
+        return
+    end if
+    hidden = homeHidden()
+    items = []
+    m.menuActions = []
+    for each t in known
+        mark = "✓  "
+        if hidden.DoesExist(strOr(t)) then mark = "✗  "
+        items.Push(mark + strOr(t))
+        m.menuActions.Push("hrow:" + strOr(t))
+    end for
+    items.Push("↑  Escolher a primeira fila…")
+    m.menuActions.Push("htop")
+    items.Push("Repor o Início")
+    m.menuActions.Push("hreset")
+    if focus >= items.Count() then focus = 0
+    openMenu(m.menu, "homeLayout", "Filas do Início (escolher mostra/esconde)", items, focus)
+end sub
+
+sub openHomeTop()
+    items = []
+    m.menuActions = []
+    for each t in homeKnown()
+        items.Push(strOr(t))
+        m.menuActions.Push("hmove:" + strOr(t))
+    end for
+    openMenu(m.menu, "homeTop", "Qual fila vem primeiro?", items, 0)
+end sub
+
 sub closeMenu_x()
     m.menu.visible = false
     m.list.setFocus(true)
@@ -518,7 +559,28 @@ end sub
 
 sub onMenuSelected_x()
     action = m.menuActions[m.menu.selected]
+    sel = m.menu.selected
     closeMenu()
+    if Left(action, 5) = "hrow:"
+        toggleHomeRow(Mid(action, 6))
+        m.top.changed = true
+        openHomeLayout(sel)
+        return
+    else if action = "htop"
+        openHomeTop()
+        return
+    else if Left(action, 6) = "hmove:"
+        moveHomeRowTop(Mid(action, 7))
+        m.top.changed = true
+        showMessage("Organizar o Início", "«" + Mid(action, 7) + "» passa a ser a primeira fila.")
+        render()
+        return
+    else if action = "hreset"
+        resetHomeLayout()
+        m.top.changed = true
+        render()
+        return
+    end if
     if Left(action, 7) = "switch:"
         target = Mid(action, 8)
         if target = currentProfileId() then return

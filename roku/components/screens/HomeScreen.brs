@@ -26,6 +26,7 @@ sub init_x()
     m.calRecent = []
     m.calUpcoming = []
     m.traktRows = []
+    m.becauseRow = invalid
     m.heroKey = ""
     ' arranque rápido: mostra os catálogos guardados da última vez enquanto atualiza
     cached = ReadAsciiFile("cachefs:/home_rows.json")
@@ -85,6 +86,22 @@ sub loadExtras()
         if it.type = "series" and Left(it.id, 2) = "tt" and series.Count() < 25 then series.Push({ id: it.id })
     end for
     if series.Count() > 0 then m.calTask = startAddonTask({ kind: "calendar", items: series }, "onCalendar")
+    ' «Porque viste X»: recomendações a partir do último filme/série acabado (ou do que estás a ver)
+    src = invalid
+    ls = ParseJson(cfgRead(pkey("lastSeen"), ""))
+    if ls <> invalid and type(ls) = "roAssociativeArray" and strOr(ls.id) <> "" then src = { id: strOr(ls.id), type: strOr(ls.type), title: "Porque viste " + strOr(ls.name) }
+    if src = invalid
+        pr = getProgress()
+        if pr.Count() > 0 and Left(strOr(pr[0].m), 2) = "tt" then src = { id: strOr(pr[0].m), type: strOr(pr[0].y), title: "Porque estás a ver " + strOr(pr[0].n) }
+    end if
+    if src <> invalid and (src.type = "movie" or src.type = "series")
+        ex = []
+        for each x in cfgJsonArray(pkey("doneRecent"))
+            ex.Push(strOr(x))
+        end for
+        m.becauseTitle = src.title
+        m.becauseTask = startAddonTask({ kind: "recommend", type: src.type, id: src.id, exclude: ex }, "onBecause")
+    end if
     token = cfgRead("traktToken", "")
     if token <> ""
         t = CreateObject("roSGNode", "TraktTask")
@@ -93,6 +110,24 @@ sub loadExtras()
         t.control = "run"
         m.traktTask = t
     end if
+end sub
+
+sub onBecause_x(event as object)
+    res = event.getData()
+    if res = invalid or res.items = invalid or res.items.Count() = 0 then return
+    items = []
+    for each x in res.items
+        items.Push({ id: x.id, type: x.type, name: x.name, poster: x.poster, videoId: "", progress: 0.0 })
+    end for
+    m.becauseRow = { title: m.becauseTitle, items: items }
+    render()
+end sub
+sub onBecause(event as object)
+    try
+        onBecause_x(event)
+    catch e
+        reportCrash("HomeScreen.onBecause", e)
+    end try
 end sub
 
 sub onCalendar_x(event as object)
@@ -152,9 +187,12 @@ sub render_x()
         lib = libraryRowItems()
         if lib.Count() > 0 then rows.Push({ title: "A minha biblioteca (Stremio)", items: lib })
         rows.Append(m.traktRows)
+        if m.becauseRow <> invalid then rows.Push(m.becauseRow)
     end if
     if m.calUpcoming.Count() > 0 then rows.Push({ title: "Em breve nas tuas séries", items: m.calUpcoming })
     rows.Append(m.catalogRows)
+    ' Início personalizado (Definições › Organizar o Início)
+    rows = applyHomeLayout(rows)
     updateAccount()
     m.top.findNode("logo").color = accentColor()
     m.skeleton.visible = false

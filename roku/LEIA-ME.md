@@ -1,4 +1,13 @@
-# Hortêncioflix para Roku — v0.14
+# Hortêncioflix para Roku — v0.15
+
+## Novidades da v0.15
+
+- **Organizar o Início** (Definições): escolhe que filas aparecem (✓/✗) e qual vem primeiro; «Repor o Início» volta ao normal. Por perfil.
+- **«Porque viste…»**: fila nova no Início com recomendações a partir do último filme ou série que acabaste (ou do que estás a ver).
+- **Proteção de ecrã própria**: com a app aberta e a TV parada, passam as imagens dos teus filmes e séries (Continuar a ver, biblioteca e catálogos), com movimento lento, o título e as horas.
+- **Primeira utilização guiada**: numa Roku ainda por configurar, um assistente de 3 passos mostra o que falta (TorBox, Stremio/add-ons, TV ao vivo), abre a configuração pelo telemóvel e verifica a conta TorBox.
+
+# v0.14
 
 ## Novidades da v0.14
 

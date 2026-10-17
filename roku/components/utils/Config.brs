@@ -1247,3 +1247,84 @@ function pinnedFilters() as object
     if j = invalid or type(j) <> "roAssociativeArray" then return {}
     return j
 end function
+
+' ---------- Início personalizável (por perfil): filas escondidas e ordem ----------
+
+function homeHidden() as object
+    out = {}
+    for each t in cfgJsonArray(pkey("homeHidden"))
+        out[strOr(t)] = true
+    end for
+    return out
+end function
+
+function homeKnown() as object
+    return cfgJsonArray(pkey("homeKnown"))
+end function
+
+' Guarda os títulos das filas (para as poder escolher nas Definições), esconde e ordena
+function applyHomeLayout(rows as object) as object
+    known = homeKnown()
+    seen = {}
+    for each t in known
+        seen[strOr(t)] = true
+    end for
+    changed = false
+    for each r in rows
+        t = strOr(r.title)
+        if t <> "" and not seen.DoesExist(t) and known.Count() < 40
+            known.Push(t)
+            seen[t] = true
+            changed = true
+        end if
+    end for
+    if changed then cfgWrite(pkey("homeKnown"), FormatJson(known))
+    hidden = homeHidden()
+    order = cfgJsonArray(pkey("homeOrder"))
+    first = []
+    rest = []
+    for each o in order
+        for each r in rows
+            if strOr(r.title) = strOr(o) and not hidden.DoesExist(strOr(r.title)) then first.Push(r)
+        end for
+    end for
+    inOrder = {}
+    for each o in order
+        inOrder[strOr(o)] = true
+    end for
+    for each r in rows
+        t = strOr(r.title)
+        if not hidden.DoesExist(t) and not inOrder.DoesExist(t) then rest.Push(r)
+    end for
+    first.Append(rest)
+    return first
+end function
+
+sub toggleHomeRow(title as string)
+    out = []
+    found = false
+    for each t in cfgJsonArray(pkey("homeHidden"))
+        if strOr(t) = title then found = true else out.Push(strOr(t))
+    end for
+    if not found then out.Push(title)
+    cfgWrite(pkey("homeHidden"), FormatJson(out))
+end sub
+
+sub moveHomeRowTop(title as string)
+    out = [title]
+    for each t in cfgJsonArray(pkey("homeOrder"))
+        if strOr(t) <> title and out.Count() < 40 then out.Push(strOr(t))
+    end for
+    cfgWrite(pkey("homeOrder"), FormatJson(out))
+end sub
+
+sub resetHomeLayout()
+    cfgDelete(pkey("homeHidden"))
+    cfgDelete(pkey("homeOrder"))
+end sub
+
+' Último título acabado de ver (para «Porque viste…»)
+sub setLastSeen(id as string, t as string, name as string)
+    if id = "" or name = "" then return
+    cfgWrite(pkey("lastSeen"), FormatJson({ id: id, type: t, name: name }))
+end sub

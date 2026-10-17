@@ -1,7 +1,7 @@
 title=Hortêncioflix
 subtitle=Filmes, séries e TV ao vivo
 major_version=0
-minor_version=14
+minor_version=15
 build_version=0
 mm_icon_focus_hd=pkg:/images/icon_hd.png
 mm_icon_focus_fhd=pkg:/images/icon_fhd.png
@@ -10,3 +10,5 @@ splash_screen_fhd=pkg:/images/splash_fhd.png
 splash_color=#0F1014
 splash_min_time=300
 ui_resolutions=fhd
+screensaver_private=1
+screensaver_title=Hortêncioflix

@@ -44,6 +44,13 @@ sub init_x()
     m.home.observeField("itemSelected", "onItemSelected")
     m.home.observeField("menuSelected", "onMenuSelected")
     pushScreen(m.home)
+    ' primeira utilização: assistente de 3 passos enquanto a app não estiver configurada
+    if cfgRead("onboarded", "") <> "1" and cfgRead("torboxKey", "") = "" and getIptvLists().Count() = 0 and not stremioLinked()
+        w = CreateObject("roSGNode", "WelcomeScreen")
+        w.observeField("action", "onSettingsAction")
+        w.observeField("done", "onWelcomeDone")
+        pushScreen(w)
+    end if
     refreshTraktToken()
     if cfgRead("updateUrl", "") <> "" then checkUpdate(false)
     startSyncServer()
@@ -840,5 +847,14 @@ sub onLaunchArgs()
         onLaunchArgs_x()
     catch e
         reportCrash("MainScene.onLaunchArgs", e)
+    end try
+end sub
+
+sub onWelcomeDone()
+    try
+        popScreen()
+        if m.home <> invalid then m.home.refreshLocal = true
+    catch e
+        reportCrash("MainScene.onWelcomeDone", e)
     end try
 end sub

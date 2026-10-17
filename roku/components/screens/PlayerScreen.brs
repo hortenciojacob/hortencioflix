@@ -740,6 +740,7 @@ sub goRecommendation(it as object)
     md = m.md
     removeProgress(strOr(md.metaId))
     addDone(strOr(md.metaId))
+    setLastSeen(strOr(md.metaId), strOr(md.metaType), strOr(md.metaName))
     m.top.openTitle = { contentId: strOr(it.id), mediaType: strOr(it.type), title: strOr(it.name), poster: strOr(it.poster) }
     m.video.control = "stop"
     m.top.finished = true
@@ -891,6 +892,7 @@ sub saveLocal(done as boolean)
     if dur <= 0 then return
     if done or curPos / dur > 0.92
         removeProgress(md.metaId)
+        setLastSeen(strOr(md.metaId), strOr(md.metaType), strOr(md.metaName))
         if strOr(md.metaType) = "series" then markEpisodeWatched(strOr(md.videoId))
         addDone(strOr(md.metaId))
         scrobble(100.0)

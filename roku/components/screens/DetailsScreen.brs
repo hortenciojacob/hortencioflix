@@ -286,6 +286,11 @@ sub onMeta_x(event as object)
             end if
         end for
         loadMoreLikeThis(meta)
+        ' coleção / saga (precisa da chave TMDB)
+        m.colRow = invalid
+        if strOr(it.type) = "movie" and cfgRead("tmdbKey", "") <> ""
+            m.colTask = startAddonTask({ kind: "collection", id: strOr(it.id), tmdbKey: cfgRead("tmdbKey", "") }, "onCollection")
+        end if
     end if
     if it.type = "series" and res.ok and res.meta.videos <> invalid and type(res.meta.videos) = "roArray" and res.meta.videos.Count() > 0
         buildSeasons(res.meta.videos)
@@ -333,8 +338,29 @@ end sub
 sub onMore_x(event as object)
     res = event.getData()
     if res.items = invalid or res.items.Count() = 0 then return
-    m.more.content = buildRowContent([{ title: "Mais como este", items: res.items }])
+    m.moreRow = { title: "Mais como este", items: res.items }
+    renderMoreRows()
+end sub
+
+' Filas por baixo dos botões: a coleção (se houver) e «Mais como este»
+sub renderMoreRows()
+    rows = []
+    if m.colRow <> invalid then rows.Push(m.colRow)
+    if m.moreRow <> invalid then rows.Push(m.moreRow)
+    if rows.Count() = 0 then return
+    m.more.content = buildRowContent(rows)
     if m.mode = "overview" then m.more.visible = true
+end sub
+
+sub onCollection(event as object)
+    try
+        res = event.getData()
+        if res = invalid or res.ok <> true then return
+        m.colRow = { title: "Coleção: " + strOr(res.title), items: res.items }
+        renderMoreRows()
+    catch e
+        reportCrash("DetailsScreen.onCollection", e)
+    end try
 end sub
 sub onMore(event as object)
     try
@@ -1014,6 +1040,16 @@ sub openOptions(focus = 0 as integer)
             m.menuActions.Push("fltPin")
         end if
     end if
+    ' listas pessoais (por perfil)
+    it0 = m.top.item
+    if it0 <> invalid and strOr(it0.id) <> ""
+        items.Push("Adicionar a uma lista…")
+        m.menuActions.Push("listAdd")
+        for each ln in listsContaining(strOr(it0.id))
+            items.Push("Tirar da lista «" + ln + "»")
+            m.menuActions.Push("listDel:" + ln)
+        end for
+    end if
     if m.seasons.Count() > 0 and m.mode <> "episodes"
         items.Push("Ver episódios")
         m.menuActions.Push("episodes")
@@ -1104,6 +1140,24 @@ sub onMenuSelected_x()
         end if
         applyStreamFilters()
         if Left(action, 4) = "flt:" or action = "sort" then openOptions(sel)
+        return
+    end if
+    if action = "listAdd"
+        openListPicker()
+        return
+    end if
+    if Left(action, 8) = "listDel:"
+        listRemove(Mid(action, 9), strOr(it.id))
+        setStatus("Tirado da lista «" + Mid(action, 9) + "».")
+        return
+    end if
+    if Left(action, 8) = "listPut:"
+        listAdd(Mid(action, 9), { id: strOr(it.id), type: strOr(it.type), name: m.metaName })
+        setStatus("Adicionado à lista «" + Mid(action, 9) + "».")
+        return
+    end if
+    if action = "listNew"
+        askNewList()
         return
     end if
     if action = "reload"
@@ -1413,5 +1467,43 @@ sub onSeasonPt(event as object)
         if m.curSeason = f.idx and names.Count() > 0 then refreshEpisodes()
     catch e
         reportCrash("DetailsScreen.onSeasonPt", e)
+    end try
+end sub
+
+sub openListPicker()
+    m.menuActions = []
+    items = []
+    for each n in listNames()
+        items.Push(n)
+        m.menuActions.Push("listPut:" + n)
+    end for
+    items.Push("+ Nova lista…")
+    m.menuActions.Push("listNew")
+    openMenu(m.menu, "options", "Adicionar a uma lista", items, 0)
+end sub
+
+sub askNewList()
+    dlg = CreateObject("roSGNode", "StandardKeyboardDialog")
+    dlg.title = "Nova lista"
+    dlg.message = ["Nome da lista (ex.: Fim de semana, Ver com a família)"]
+    dlg.buttons = ["Criar e adicionar", "Cancelar"]
+    dlg.observeFieldScoped("buttonSelected", "onNewList")
+    m.listDlg = dlg
+    m.top.getScene().dialog = dlg
+end sub
+
+sub onNewList()
+    try
+        dlg = m.listDlg
+        idx = dlg.buttonSelected
+        name = dlg.text.Trim()
+        dlg.close = true
+        if idx <> 0 or name = "" then return
+        if Len(name) > 30 then name = Left(name, 30)
+        it = m.top.item
+        listAdd(name, { id: strOr(it.id), type: strOr(it.type), name: m.metaName })
+        setStatus("Lista «" + name + "» criada com este título.")
+    catch e
+        reportCrash("DetailsScreen.onNewList", e)
     end try
 end sub

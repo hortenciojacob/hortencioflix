@@ -69,6 +69,18 @@ sub load()
 end sub
 
 sub updateAccount()
+    ' avatar: a inicial do perfil sobre uma cor fixa por perfil
+    pn = strOr(currentProfile().n)
+    av = m.top.findNode("avatar")
+    if av <> invalid
+        colors = ["0xE50914FF", "0x2563EBFF", "0x16A34AFF", "0x9333EAFF", "0xEA580CFF", "0x0891B2FF", "0xDB2777FF"]
+        h = 0
+        for i = 1 to Len(pn)
+            h = h + Asc(Mid(pn, i, 1))
+        end for
+        av.color = colors[h mod colors.Count()]
+        m.top.findNode("avatarLetter").text = UCase(Left(pn, 1))
+    end if
     email = cfgRead("stremioEmail", "")
     prof = "Perfil: " + strOr(currentProfile().n) + "   ·   "
     if stremioLinked()
@@ -194,6 +206,7 @@ sub render_x()
         if lib.Count() > 0 then rows.Push({ title: "A minha biblioteca (Stremio)", items: lib })
         rows.Append(m.traktRows)
         if m.becauseRow <> invalid then rows.Push(m.becauseRow)
+        rows.Append(listRows())
     end if
     if m.calUpcoming.Count() > 0 then rows.Push({ title: "Em breve nas tuas séries", items: m.calUpcoming })
     for each r in m.catalogRows

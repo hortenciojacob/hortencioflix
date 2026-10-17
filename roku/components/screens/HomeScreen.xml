@@ -34,6 +34,9 @@
             vertFocusAnimationStyle="fixedFocus" />
         <Label id="status" translation="[0,760]" width="1920" horizAlign="center" font="font:MediumSystemFont"
             color="0xC8CAD0FF" visible="false" />
+        <!-- avatar do perfil: inicial sobre a cor do perfil -->
+        <Rectangle id="avatar" translation="[1820,40]" width="56" height="56" color="0xE50914FF" />
+        <Label id="avatarLetter" translation="[1820,40]" width="56" height="56" horizAlign="center" vertAlign="center" font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
         <Label id="account" translation="[1000,1040]" width="880" horizAlign="right" font="font:SmallestSystemFont" color="0x6E717AFF" />
 
         <Timer id="heroTimer" duration="0.35" repeat="false" />

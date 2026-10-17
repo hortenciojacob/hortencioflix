@@ -60,6 +60,16 @@
         </Group>
         <Timer id="postTimer" duration="1" repeat="true" />
 
+        <!-- mini-guia da TV ao vivo: canal anterior, atual e seguinte com «agora / a seguir» -->
+        <Group id="chGuide" translation="[0,760]" visible="false">
+            <Rectangle width="1920" height="320" color="0x07080CE0" />
+            <Label id="cgPrev" translation="[100,26]" width="1720" font="font:SmallSystemFont" color="0x9A9DA6FF" />
+            <Label id="cgName" translation="[100,80]" width="1720" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <Label id="cgNow" translation="[100,140]" width="1720" font="font:MediumSystemFont" color="0xE6E7EAFF" />
+            <Label id="cgNext" translation="[100,220]" width="1720" font="font:SmallSystemFont" color="0x9A9DA6FF" />
+        </Group>
+        <Timer id="cgTimer" duration="5" repeat="false" />
+
         <Timer id="osdTimer" duration="5" repeat="false" />
         <Timer id="countTimer" duration="1" repeat="true" />
         <Timer id="sleepTimer" duration="1800" repeat="false" />

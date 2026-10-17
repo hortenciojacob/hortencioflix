@@ -19,6 +19,7 @@
             itemSpacing="[22,40]" numColumns="6" numRows="3" drawFocusFeedback="false"
             vertFocusAnimationStyle="floatingFocus" />
         <SkeletonRows id="skeleton" translation="[600,150]" visible="false" />
+        <Label text="✱  nota mínima IMDb (6+, 7+, 8+)" translation="[80,1020]" font="font:SmallestSystemFont" color="0x6E717AFF" />
         <Label id="status" translation="[600,500]" width="1240" wrap="true" font="font:MediumSystemFont" color="0xC8CAD0FF" />
     </children>
 </component>

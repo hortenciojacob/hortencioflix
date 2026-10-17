@@ -1413,3 +1413,117 @@ function ptRowTitle(t as string) as string
     end for
     return out
 end function
+
+' ---------- Listas pessoais (por perfil) ----------
+' [{ n: "Fim de semana", i: [{ id, t, n }] }]  — compacto: a Roku tem pouco espaço de registo
+
+function listsGet() as object
+    return cfgJsonArray(pkey("lists"))
+end function
+
+function listNames() as object
+    out = []
+    for each l in listsGet()
+        out.Push(strOr(l.n))
+    end for
+    return out
+end function
+
+function listsContaining(id as string) as object
+    out = []
+    for each l in listsGet()
+        if l.i <> invalid
+            for each x in l.i
+                if strOr(x.id) = id then out.Push(strOr(l.n))
+            end for
+        end if
+    end for
+    return out
+end function
+
+sub listAdd(name as string, it as object)
+    ls = listsGet()
+    total = 0
+    for each l in ls
+        if l.i <> invalid then total = total + l.i.Count()
+    end for
+    found = false
+    for each l in ls
+        if strOr(l.n) = name
+            found = true
+            exists = false
+            for each x in l.i
+                if strOr(x.id) = it.id then exists = true
+            end for
+            if not exists and total < 80 then l.i.Unshift({ id: it.id, t: it.type, n: Left(strOr(it.name), 40) })
+        end if
+    end for
+    if not found and ls.Count() < 8 then ls.Push({ n: name, i: [{ id: it.id, t: it.type, n: Left(strOr(it.name), 40) }] })
+    cfgWrite(pkey("lists"), FormatJson(ls))
+end sub
+
+sub listRemove(name as string, id as string)
+    ls = listsGet()
+    out = []
+    for each l in ls
+        if strOr(l.n) = name
+            keep = []
+            for each x in l.i
+                if strOr(x.id) <> id then keep.Push(x)
+            end for
+            l.i = keep
+        end if
+        ' listas vazias desaparecem
+        if l.i <> invalid and l.i.Count() > 0 then out.Push(l)
+    end for
+    cfgWrite(pkey("lists"), FormatJson(out))
+end sub
+
+' Filas do Início: uma por lista
+function listRows() as object
+    rows = []
+    for each l in listsGet()
+        items = []
+        for each x in l.i
+            id = strOr(x.id)
+            p = ""
+            if Left(id, 2) = "tt" then p = "https://images.metahub.space/poster/medium/" + id + "/img"
+            items.Push({ id: id, type: strOr(x.t), name: strOr(x.n), poster: p, videoId: "", progress: 0.0 })
+        end for
+        if items.Count() > 0 then rows.Push({ title: "Lista: " + strOr(l.n), items: items })
+    end for
+    return rows
+end function
+
+' ---------- Lembretes de programas (TV ao vivo) ----------
+
+function getReminders() as object
+    return cfgJsonArray("reminders")
+end function
+
+sub addReminder(r as object)
+    out = []
+    now = nowEpoch()
+    for each x in getReminders()
+        if numOr(x.s, 0) > now - 600 and not (strOr(x.u) = r.u and numOr(x.s, 0) = r.s) and out.Count() < 15 then out.Push(x)
+    end for
+    out.Push(r)
+    cfgWrite("reminders", FormatJson(out))
+end sub
+
+' Lembretes que começam no próximo minuto (e saem da lista)
+function dueReminders() as object
+    now = nowEpoch()
+    due = []
+    keep = []
+    for each x in getReminders()
+        s = numOr(x.s, 0)
+        if s - now <= 60 and s > now - 600
+            due.Push(x)
+        else if s > now
+            keep.Push(x)
+        end if
+    end for
+    if due.Count() > 0 or keep.Count() <> getReminders().Count() then cfgWrite("reminders", FormatJson(keep))
+    return due
+end function

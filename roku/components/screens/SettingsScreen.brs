@@ -524,6 +524,12 @@ sub openProfileMenu()
     m.menuActions.Push("new")
     items.Push("+ Novo perfil infantil")
     m.menuActions.Push("newKid")
+    if strOr(currentProfile().pin) <> ""
+        items.Push("Tirar o PIN deste perfil")
+    else
+        items.Push("Proteger este perfil com PIN")
+    end if
+    m.menuActions.Push("ppin")
     if cur <> "main"
         items.Push("- Apagar o perfil atual")
         m.menuActions.Push("delete")
@@ -604,11 +610,27 @@ sub onMenuSelected_x()
     if Left(action, 7) = "switch:"
         target = Mid(action, 8)
         if target = currentProfileId() then return
+        tp = invalid
+        for each p in getProfiles()
+            if strOr(p.id) = target then tp = p
+        end for
         if isKidProfile() and parentalPin() <> ""
             m.pendingProfile = target
             askPin("PIN para sair do perfil infantil", "pinSwitch")
+        else if tp <> invalid and strOr(tp.pin) <> ""
+            ' perfil protegido: pede o PIN desse perfil
+            m.pendingProfile = target
+            m.pendingPin = strOr(tp.pin)
+            askPin("PIN do perfil «" + strOr(tp.n) + "»", "profPinEnter")
         else
             switchProfile(target)
+        end if
+    else if action = "ppin"
+        if strOr(currentProfile().pin) <> ""
+            setProfilePin("")
+            showMessage("Perfis", "Este perfil já não pede PIN.")
+        else
+            askPin("Escolhe um PIN de 4 dígitos para este perfil", "profPinNew")
         end if
     else if action = "new"
         askText("Novo perfil", "Nome do perfil", "", "newProfile", false)
@@ -683,6 +705,19 @@ sub onPinDone_x()
         dlg2.buttons = ["Mudar o PIN", "Remover o PIN", "Cancelar"]
         dlg2.observeFieldScoped("buttonSelected", "onPinAction")
         m.top.getScene().dialog = dlg2
+    else if t = "profPinNew"
+        if Len(pin) < 4
+            showMessage("Perfis", "O PIN deve ter 4 dígitos.")
+            return
+        end if
+        setProfilePin(pin)
+        showMessage("Perfis", "Feito: para entrar neste perfil a partir de outro, pede este PIN.")
+    else if t = "profPinEnter"
+        if pin = strOr(m.pendingPin)
+            switchProfile(m.pendingProfile)
+        else
+            showMessage("Perfis", "PIN errado.")
+        end if
     else if t = "pinSwitch"
         if pin = parentalPin()
             switchProfile(m.pendingProfile)
@@ -717,4 +752,14 @@ sub onPinAction()
     catch e
         reportCrash("SettingsScreen.onPinAction", e)
     end try
+end sub
+
+sub setProfilePin(pin as string)
+    cur = currentProfileId()
+    out = []
+    for each p in getProfiles()
+        if strOr(p.id) = cur then p.pin = pin
+        out.Push(p)
+    end for
+    cfgWrite("profiles", FormatJson(out))
 end sub

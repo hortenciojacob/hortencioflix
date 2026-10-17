@@ -60,6 +60,12 @@ sub init_x()
     m.tbTimer.repeat = true
     m.tbTimer.observeField("fire", "onTbTimer")
     m.tbTimer.control = "start"
+    ' lembretes de programas (TV ao vivo): verifica a cada 30 s
+    m.remTimer = CreateObject("roSGNode", "Timer")
+    m.remTimer.duration = 30
+    m.remTimer.repeat = true
+    m.remTimer.observeField("fire", "onRemTimer")
+    m.remTimer.control = "start"
     if cfgRead("torboxKey", "") <> "" then m.tbTask = startAddonTask({ kind: "tbme", key: cfgRead("torboxKey", "") }, "onTbMe")
 
     ' abertura animada (pode ser desligada nas Definições)
@@ -376,7 +382,10 @@ end sub
 ' ---------- Leitor (ecrã inteiro / mini) ----------
 
 sub onPlayRequest_x(event as object)
-    req = event.getData()
+    startMedia(event.getData())
+end sub
+
+sub startMedia(req as dynamic)
     if req = invalid or req.url = invalid then return
     if m.player = invalid
         m.player = CreateObject("roSGNode", "PlayerScreen")
@@ -856,5 +865,39 @@ sub onWelcomeDone()
         if m.home <> invalid then m.home.refreshLocal = true
     catch e
         reportCrash("MainScene.onWelcomeDone", e)
+    end try
+end sub
+
+sub onRemTimer()
+    try
+        due = dueReminders()
+        if due.Count() = 0 or m.top.dialog <> invalid then return
+        r = due[0]
+        m.remDue = r
+        dlg = CreateObject("roSGNode", "StandardMessageDialog")
+        dlg.title = "A começar: " + strOr(r.t)
+        dlg.message = ["Em " + strOr(r.c) + "."]
+        dlg.buttons = ["Ver agora", "Ignorar"]
+        dlg.observeFieldScoped("buttonSelected", "onRemDialog")
+        m.top.dialog = dlg
+    catch e
+        reportCrash("MainScene.onRemTimer", e)
+    end try
+end sub
+
+sub onRemDialog()
+    try
+        dlg = m.top.dialog
+        idx = -1
+        if dlg <> invalid
+            idx = dlg.buttonSelected
+            dlg.close = true
+        end if
+        r = m.remDue
+        if idx = 0 and r <> invalid
+            startMedia({ url: strOr(r.u), title: strOr(r.c), format: guessStreamFormat(strOr(r.u), ""), headers: [], kind: "live", channels: [{ name: strOr(r.c), url: strOr(r.u), e: "Agora: " + strOr(r.t) }], chIndex: 0, epgNow: "Agora: " + strOr(r.t) })
+        end if
+    catch e
+        reportCrash("MainScene.onRemDialog", e)
     end try
 end sub

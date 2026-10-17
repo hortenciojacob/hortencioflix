@@ -68,7 +68,7 @@ sub onStart_x()
         m.focusTitle.translation = [80, 150]
         m.skeleton.visible = true
         m.lastQuery = q
-        m.task = startAddonTask({ kind: "person", name: q, tmdbKey: cfgRead("tmdbKey", "") }, "onResults")
+        m.task = startAddonTask({ kind: "person", name: q, tmdbKey: cfgRead("tmdbKey", ""), traktId: cfgRead("traktId", "") }, "onResults")
         return
     end if
     showHistory()

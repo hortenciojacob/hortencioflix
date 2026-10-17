@@ -643,7 +643,10 @@ sub playChannelAt(idx as integer)
     end if
     chans = []
     for each x in m.view
-        chans.Push({ name: x.name, url: x.url })
+        ' «agora / a seguir» de cada canal, para o mini-guia do leitor
+        e = ""
+        if chans.Count() < 400 then e = nowText(x)
+        chans.Push({ name: x.name, url: x.url, e: e })
     end for
     m.top.playRequest = {
         url: ch.url,
@@ -1329,7 +1332,13 @@ function gridKey(key as string) as boolean
             if pr.e <= now then info = info + Chr(10) + "Este programa já terminou."
             if strOr(pr.d) <> "" then info = info + Chr(10) + Chr(10) + cleanText(pr.d)
             dlg.message = [info]
-            dlg.buttons = ["OK"]
+            if pr.s > now
+                dlg.buttons = ["Lembrar-me quando começar", "Fechar"]
+                m.gridDlgPr = { u: strOr(ch.url), c: cleanText(ch.name), t: cleanText(pr.t), s: pr.s }
+            else
+                dlg.buttons = ["OK"]
+                m.gridDlgPr = invalid
+            end if
             dlg.observeFieldScoped("buttonSelected", "onGridDialogClose")
             m.top.getScene().dialog = dlg
         end if
@@ -1341,7 +1350,16 @@ end function
 sub onGridDialogClose()
     try
         dlg = m.top.getScene().dialog
-        if dlg <> invalid then dlg.close = true
+        idx = -1
+        if dlg <> invalid
+            idx = dlg.buttonSelected
+            dlg.close = true
+        end if
+        if idx = 0 and m.gridDlgPr <> invalid
+            addReminder(m.gridDlgPr)
+            m.gridDlgPr = invalid
+            showMessage("Lembrete", "Avisamos-te 1 minuto antes, com a Hortêncioflix aberta.")
+        end if
         m.top.setFocus(true)
     catch e
         reportCrash("IptvScreen.onGridDialogClose", e)

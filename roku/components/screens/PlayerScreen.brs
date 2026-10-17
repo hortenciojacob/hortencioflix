@@ -31,6 +31,9 @@ sub init_x()
     m.postTitle = m.top.findNode("postTitle")
     m.postBtns = m.top.findNode("postBtns")
     m.postGrid = m.top.findNode("postGrid")
+    m.chGuide = m.top.findNode("chGuide")
+    m.cgTimer = m.top.findNode("cgTimer")
+    m.cgTimer.observeField("fire", "hideChGuide")
     m.postTimer = m.top.findNode("postTimer")
     m.postTimer.observeField("fire", "onPostTick")
     m.postBtns.observeField("buttonSelected", "onPostButton")
@@ -222,6 +225,7 @@ sub onMedia_x()
     end if
     if isLive()
         startPlayback(0, [])
+        showChGuide()
         return
     end if
     loadSegments()
@@ -1450,7 +1454,41 @@ sub zap(delta as integer)
     md.alts = []
     md.altIndex = 0
     md.headers = []
+    md.epgNow = strOr(ch.e)
     m.top.media = md
+    showChGuide()
+end sub
+
+' Mini-guia: canal atual em grande, com o anterior e o seguinte (▲ ▼ para mudar, OK para mostrar)
+sub showChGuide()
+    chs = m.md.channels
+    if chs = invalid or type(chs) <> "roArray" or chs.Count() = 0 then return
+    n = chs.Count()
+    i = Int(numOr(m.md.chIndex, 0))
+    if i < 0 or i >= n then return
+    p = (i - 1 + n) mod n
+    q = (i + 1) mod n
+    m.top.findNode("cgPrev").text = "▲  " + (p + 1).ToStr() + ".  " + cleanText(strOr(chs[p].name)) + epgShort(chs[p])
+    m.top.findNode("cgName").text = (i + 1).ToStr() + ".  " + cleanText(strOr(chs[i].name))
+    nowT = strOr(chs[i].e)
+    if nowT = "" then nowT = "Sem guia de programação para este canal"
+    m.top.findNode("cgNow").text = nowT
+    m.top.findNode("cgNext").text = "▼  " + (q + 1).ToStr() + ".  " + cleanText(strOr(chs[q].name)) + epgShort(chs[q])
+    m.chGuide.visible = true
+    m.cgTimer.control = "stop"
+    m.cgTimer.control = "start"
+end sub
+
+function epgShort(ch as object) as string
+    e = strOr(ch.e)
+    if e = "" then return ""
+    p = Instr(1, e, "   ·   ")
+    if p > 0 then e = Left(e, p - 1)
+    return "   —   " + e
+end function
+
+sub hideChGuide()
+    m.chGuide.visible = false
 end sub
 
 ' ---------- Sincronizar legendas ----------
@@ -1899,6 +1937,14 @@ end sub
 function onKeyEvent_x(key as string, press as boolean) as boolean
     if not press then return false
     if isMini() then return false
+    if key = "OK" and isLive() and not m.menu.visible and not m.chGuide.visible
+        showChGuide()
+        return true
+    end if
+    if key = "back" and m.chGuide.visible
+        hideChGuide()
+        return true
+    end if
     if key = "back" and m.postPlay.visible
         hidePostPlay()
         return true

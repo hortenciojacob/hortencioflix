@@ -26,6 +26,8 @@ sub run_x()
         res = loadRecommend(req)
     else if kind = "translate"
         res = loadTranslation(req)
+    else if kind = "collection"
+        res = loadCollection(req)
     else if kind = "translateSeason"
         res = loadSeasonTranslation(req)
     else if kind = "streams"
@@ -55,6 +57,10 @@ sub run_x()
         res = loadCalendar(req.items)
     else if kind = "person"
         res = loadPerson(req.name, req.tmdbKey, req.addons)
+        if res.source = "search" and sOr(req.traktId) <> ""
+            tr = loadPersonTrakt(req.name, sOr(req.traktId))
+            if tr.ok then res = tr
+        end if
     else if kind = "epgxtream"
         res = loadXtreamEpg(req.url)
     else if kind = "epgxml"
@@ -229,7 +235,9 @@ function metasToItems(data as dynamic, limit as integer) as object
                     info = info + gs
                 end if
             end if
-            items.Push({ id: mt.id, type: mt.type, name: sOr(mt.name), poster: sOr(mt.poster), videoId: "", progress: 0.0, bg: sOr(mt.background), logo: sOr(mt.logo), desc: sOr(mt.description), info: info })
+            rating = 0.0
+            if mt.imdbRating <> invalid then rating = Val(mt.imdbRating.ToStr())
+            items.Push({ id: mt.id, type: mt.type, name: sOr(mt.name), poster: sOr(mt.poster), videoId: "", progress: 0.0, bg: sOr(mt.background), logo: sOr(mt.logo), desc: sOr(mt.description), info: info, rating: rating })
         end if
     end for
     return items
@@ -1532,4 +1540,90 @@ function loadSeasonTranslation(req as object) as object
         end if
     end if
     return { ok: names.Count() > 0, names: names }
+end function
+
+' Filmografia pelo Trakt (sem chave TMDB): filmes e séries em que a pessoa entrou, os mais recentes primeiro
+function loadPersonTrakt(name as string, cid as string) as object
+    h = { "trakt-api-version": "2", "trakt-api-key": cid, "Content-Type": "application/json" }
+    s = httpJsonAuth("https://api.trakt.tv/search/person?query=" + urlEscape(name) + "&limit=1", h, 8000)
+    if s = invalid or type(s) <> "roArray" or s.Count() = 0 or s[0].person = invalid then return { ok: false }
+    p = s[0].person
+    slug = ""
+    if p.ids <> invalid then slug = sOr(p.ids.slug)
+    if slug = "" then return { ok: false }
+    items = []
+    seen = {}
+    for each kindPath in ["movies", "shows"]
+        d = httpJsonAuth("https://api.trakt.tv/people/" + slug + "/" + kindPath, h, 10000)
+        if d <> invalid and type(d) = "roAssociativeArray"
+            list = []
+            for each grp in [d.cast, d.crew]
+                if grp <> invalid
+                    if type(grp) = "roArray"
+                        list.Append(grp)
+                    else if type(grp) = "roAssociativeArray"
+                        for each k in grp
+                            if type(grp[k]) = "roArray" then list.Append(grp[k])
+                        end for
+                    end if
+                end if
+            end for
+            for each c in list
+                o = c.movie
+                t = "movie"
+                if o = invalid
+                    o = c.show
+                    t = "series"
+                end if
+                if o <> invalid and o.ids <> invalid
+                    imdb = sOr(o.ids.imdb)
+                    if imdb <> "" and not seen.DoesExist(imdb)
+                        seen[imdb] = true
+                        yr = 0
+                        if o.year <> invalid then yr = Int(o.year)
+                        items.Push({ id: imdb, type: t, name: sOr(o.title), poster: "https://images.metahub.space/poster/medium/" + imdb + "/img", videoId: "", progress: 0.0, sk: -yr })
+                    end if
+                end if
+            end for
+        end if
+    end for
+    if items.Count() = 0 then return { ok: false }
+    items.SortBy("sk")
+    out = []
+    for each it in items
+        if out.Count() < 60 then out.Push(it)
+    end for
+    return { ok: true, rows: [{ title: "Filmografia de " + sOr(p.name), items: out }], source: "trakt" }
+end function
+
+' Coleção / saga de um filme (TMDB): as partes por ordem de estreia
+function loadCollection(req as object) as object
+    key = sOr(req.tmdbKey)
+    id = sOr(req.id)
+    if key = "" or Left(id, 2) <> "tt" then return { ok: false }
+    f = httpJson("https://api.themoviedb.org/3/find/" + id + "?api_key=" + key + "&external_source=imdb_id")
+    if f = invalid or f.movie_results = invalid or f.movie_results.Count() = 0 then return { ok: false }
+    mv = httpJson("https://api.themoviedb.org/3/movie/" + Int(f.movie_results[0].id).ToStr() + "?api_key=" + key + "&language=pt-PT")
+    if mv = invalid or mv.belongs_to_collection = invalid then return { ok: false }
+    col = httpJson("https://api.themoviedb.org/3/collection/" + Int(mv.belongs_to_collection.id).ToStr() + "?api_key=" + key + "&language=pt-PT")
+    if col = invalid or col.parts = invalid or col.parts.Count() < 2 then return { ok: false }
+    parts = []
+    for each p in col.parts
+        parts.Push({ tid: Int(p.id).ToStr(), d: sOr(p.release_date), name: sOr(p.title) })
+    end for
+    parts.SortBy("d")
+    urls = []
+    for each p in parts
+        urls.Push("https://api.themoviedb.org/3/movie/" + p.tid + "/external_ids?api_key=" + key)
+    end for
+    ext = httpJsonMany(urls, 15000, 6)
+    items = []
+    for i = 0 to parts.Count() - 1
+        e = ext[i]
+        if e <> invalid and isStr(e.imdb_id) and e.imdb_id <> "" and parts[i].d <> ""
+            items.Push({ id: e.imdb_id, type: "movie", name: parts[i].name, poster: "https://images.metahub.space/poster/medium/" + e.imdb_id + "/img", videoId: "", progress: 0.0 })
+        end if
+    end for
+    if items.Count() < 2 then return { ok: false }
+    return { ok: true, title: sOr(col.name), items: items }
 end function

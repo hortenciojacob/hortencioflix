@@ -1,4 +1,22 @@
-# Hortêncioflix para Roku — v0.16
+# Hortêncioflix para Roku — v0.17
+
+## Novidades da v0.17
+
+**Descobrir**
+- **Filmografia pelo Trakt**: a página de um ator/realizador mostra os filmes e séries em que entrou (mais recentes primeiro), mesmo sem chave TMDB.
+- **Coleções / sagas** (com chave TMDB): na página de um filme aparece «Coleção: …» com todas as partes por ordem de estreia.
+- **Explorar por ano** (últimos 8 anos de filmes, 5 de séries) e **nota mínima IMDb** com a tecla ✱ (6+, 7+, 8+).
+- **Listas tuas**: na página do título, ✱ › «Adicionar a uma lista…» (ex.: «Fim de semana», «Ver com a família»). Cada lista aparece como fila no Início. Por perfil.
+
+**TV ao vivo**
+- **Mini-guia** por cima do canal: canal anterior, atual (com «agora / a seguir») e seguinte. Aparece ao mudar de canal e com OK.
+- **Lembretes**: no Guia TV, escolhe um programa futuro › «Lembrar-me quando começar». Um minuto antes, a app pergunta se queres ver (com a app aberta).
+
+**Perfis**
+- **Avatar** com a inicial e a cor do perfil no Início.
+- **PIN por perfil**: Definições › Perfil › «Proteger este perfil com PIN». Para entrar nele a partir de outro perfil, pede o PIN.
+
+# v0.16
 
 ## Novidades da v0.16
 

@@ -323,6 +323,7 @@ class PlayerActivity : BaseActivity() {
         failedSources.clear()
         reachedLong = false
         postPlayDone = false
+        qualDropDeclined = false
         postPlay?.dismiss()
         if (recsFor != Session.meta?.id) recs = null
         prefetchFor = ""
@@ -1330,10 +1331,23 @@ class PlayerActivity : BaseActivity() {
         val lower = when { cur >= 2160 -> 1080; cur >= 1080 -> 720; cur >= 720 -> 480; else -> return }
         if (Session.streams.none { it.cached && it.quality in 1..lower }) return
         rebuffers.clear()
-        PlayLog.add("📉 Muitas pausas a carregar — a baixar de ${qualityLabel(cur)} para ${qualityLabel(lower)}")
-        toast("A rede está lenta — a mudar para ${qualityLabel(lower)} para evitar pausas")
-        switchQuality(lower)
+        val mode = Prefs.str("qualAuto", "ask")
+        if (mode == "off" || qualDropDeclined) return
+        if (mode == "auto") {
+            PlayLog.add("📉 Muitas pausas a carregar — a baixar de ${qualityLabel(cur)} para ${qualityLabel(lower)}")
+            toast("A rede está lenta — a mudar para ${qualityLabel(lower)} para evitar pausas")
+            switchQuality(lower)
+            return
+        }
+        // por defeito pergunta: o vídeo continua a tocar enquanto decides
+        glassChoice("A rede está lenta (${qualityLabel(cur)})", listOf("Mudar para ${qualityLabel(lower)} — menos pausas", "Manter ${qualityLabel(cur)} neste vídeo")) { i ->
+            if (i == 0) { PlayLog.add("📉 Rede lenta — mudou para ${qualityLabel(lower)} (escolhido)"); switchQuality(lower) }
+            else qualDropDeclined = true
+        }
     }
+
+    /** «Manter» na pergunta da rede lenta: não volta a perguntar até ao próximo vídeo. */
+    private var qualDropDeclined = false
 
     private fun switchQuality(target: Int) {
         val meta = Session.meta

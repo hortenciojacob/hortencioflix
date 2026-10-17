@@ -2,6 +2,8 @@
 
 ## Novidades da v0.16
 
+- 0.16.1: quando a rede está lenta, a app **pergunta** se quer baixar a qualidade (o vídeo continua a tocar); «Manter» não volta a perguntar nesse vídeo. Em Definições: perguntar / mudar sozinha / nunca.
+
 - **Título em português** na página do filme/série (ex.: «O Cavaleiro das Trevas»), ao lado do original, com a **classificação etária** (M/12, M/16…).
 - **Nomes dos episódios em português**, por temporada (Trakt ou TMDB), guardados para a próxima vez.
 - **«Termina às 23:40»** nos filmes: a hora a que acaba se começares agora (conta com o que já viste).

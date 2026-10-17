@@ -278,6 +278,7 @@ class SettingsActivity : BaseActivity() {
         rows.add(Row("Filtros fixos das fontes", com.hortencioflix.tv.data.SourceFilters.pinned().let { if (it.isEmpty()) "Nenhum — fixa-os no painel das fontes (📌)" else com.hortencioflix.tv.data.SourceFilters.describe(it) + " — tocar para soltar" }, tag = "pinFilters"))
         rows.add(Row("Preferir áudio dobrado", when (Prefs.str("dubPref")) { "br" -> "🇧🇷 Português do Brasil"; "pt" -> "🇵🇹 Português de Portugal"; else -> "Não — a melhor qualidade primeiro" } + " — as fontes dobradas passam à frente", tag = "dubPref"))
         rows.add(Row("Esconder fontes que podem falhar", onOff(Prefs.hideRisky) + " — Dolby Vision sem HDR, AV1, 3D", tag = "risky"))
+        rows.add(Row("Rede lenta: baixar a qualidade", when (Prefs.str("qualAuto", "ask")) { "auto" -> "Mudar sozinha"; "off" -> "Nunca"; else -> "Perguntar (padrão)" } + " — depois de 3 pausas para carregar em 3 minutos", tag = "qualAuto"))
         rows.add(Row("Trailer no fundo da página do título", onOff(Prefs.str("trailerAuto", "1") == "1") + " — começa sem som ao fim de 2,5 s (não toca com poupança de dados)", tag = "trailerAuto"))
         rows.add(Row("«A seguir» no fim do filme", onOff(Prefs.str("postPlay", "1") == "1") + " — nos créditos, o vídeo encolhe e aparecem filmes para ver a seguir", tag = "postPlay"))
         rows.add(Row("Perguntar ao retomar", onOff(Prefs.askResume) + " — «Continuar de 23:10 / Começar do início»", tag = "askResume"))
@@ -383,6 +384,9 @@ class SettingsActivity : BaseActivity() {
                 if (it.isNotEmpty()) Updater.checkNow(this)
             }
             "homeLayout" -> homeLayoutDialog()
+            "qualAuto" -> choiceDialog("Rede lenta: baixar a qualidade", listOf("Perguntar (padrão)", "Mudar sozinha", "Nunca")) {
+                Prefs.put("qualAuto", listOf("ask", "auto", "off")[it]); refresh()
+            }
             "trailerAuto" -> { Prefs.put("trailerAuto", if (Prefs.str("trailerAuto", "1") == "1") "0" else "1"); refresh() }
             "postPlay" -> { Prefs.put("postPlay", if (Prefs.str("postPlay", "1") == "1") "0" else "1"); refresh() }
             "rokuType" -> inputDialog("Escrever na TV", "Nome do filme…", "") { txt ->

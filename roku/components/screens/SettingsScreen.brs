@@ -124,6 +124,12 @@ sub render_x()
         m.actions.Push("homeLayout")
         items.Push("Saltar introdução automaticamente: " + yesNo(cfgRead("autoSkip", "0")))
         m.actions.Push("autoSkip")
+        qa = cfgRead("qualAuto", "ask")
+        ql = "perguntar"
+        if qa = "auto" then ql = "mudar sozinha"
+        if qa = "off" then ql = "nunca"
+        items.Push("Rede lenta, baixar a qualidade: " + ql)
+        m.actions.Push("qualAuto")
         items.Push("«A seguir» no fim do filme (sugestões nos créditos): " + yesNo(cfgRead("postPlay", "1")))
         m.actions.Push("postPlay")
         items.Push("Fundo animado na página do título: " + yesNo(cfgRead("trailerAuto", "1")))
@@ -252,6 +258,9 @@ sub onSelected_x()
             cycle("ptDesc", ["1", "0"], "1")
             render()
         end if
+    else if action = "qualAuto"
+        cycle("qualAuto", ["ask", "auto", "off"], "ask")
+        render()
     else if action = "postPlay" or action = "trailerAuto"
         cycle(action, ["1", "0"], "1")
         render()

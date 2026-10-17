@@ -192,6 +192,7 @@ sub onMedia_x()
     m.attempting = false
     if not m.fromRetry
         m.autoTries = 0
+        m.qdropDeclined = false
         resetEpisodeState()
     end if
     m.fromRetry = false
@@ -1832,6 +1833,14 @@ sub onMenuSelected_x()
     else if id = "chlist"
         closeMenu()
         if idx >= 0 and idx < m.chMap.Count() then zap(m.chMap[idx] - Int(numOr(m.md.chIndex, 0)))
+    else if id = "qdrop"
+        closeMenu()
+        if idx = 0
+            startQualitySwitch(Int(numOr(m.qdropTarget, 0)))
+        else
+            ' não volta a perguntar até ao próximo vídeo
+            m.qdropDeclined = true
+        end if
     else if id = "quality"
         closeMenu()
         startQualitySwitch(Int(m.qualOpts[idx].q))
@@ -2048,9 +2057,19 @@ sub noteRebuffer()
     if cur >= 720 and cur < 1080 then lower = 480
     if lower = 0 then return
     m.rebuf = []
-    logEvent("Muitas pausas a carregar — a baixar para " + qualityText(lower))
-    showOsd("A rede está lenta — a mudar para " + qualityText(lower))
-    startQualitySwitch(lower)
+    mode = cfgRead("qualAuto", "ask")
+    if mode = "off" or m.qdropDeclined = true then return
+    if mode = "auto"
+        logEvent("Muitas pausas a carregar — a baixar para " + qualityText(lower))
+        showOsd("A rede está lenta — a mudar para " + qualityText(lower))
+        startQualitySwitch(lower)
+        return
+    end if
+    ' por defeito pergunta: o vídeo continua a tocar enquanto decides
+    if m.menu.visible then return
+    m.qdropTarget = lower
+    logEvent("Muitas pausas a carregar — a perguntar se baixa para " + qualityText(lower))
+    openMenu(m.menu, "qdrop", "A rede está lenta (" + qualityText(cur) + ")", ["Mudar para " + qualityText(lower) + " — menos pausas", "Manter " + qualityText(cur) + " neste vídeo"], 0)
 end sub
 
 ' Indica se o vídeo é HDR / Dolby Vision e se esta TV o mostra

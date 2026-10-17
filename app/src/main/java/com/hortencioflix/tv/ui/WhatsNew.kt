@@ -7,6 +7,7 @@ import com.hortencioflix.tv.data.Prefs
 /** «O que há de novo» — aparece uma vez depois de cada atualização. */
 object WhatsNew {
     private val NOTES = listOf(
+        "Rede lenta: a app pergunta antes de baixar a qualidade (Definições: perguntar / mudar sozinha / nunca)",
         "🎬 Trailer no fundo: ao abrir um filme ou série, o trailer começa sem som por trás da página; o botão «Trailer» abre-o em ecrã inteiro, com som, dentro da app",
         "«A seguir» no fim do filme: quando começam os créditos, o vídeo encolhe e aparecem filmes recomendados — o primeiro começa sozinho ao fim de 15 s (Voltar continua os créditos)",
         "📺 Ver na TV: no telemóvel, abre um filme ou episódio e toca em «Ver na TV» — a Roku abre a app e começa a reproduzir",

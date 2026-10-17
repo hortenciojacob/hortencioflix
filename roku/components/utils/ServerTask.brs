@@ -52,7 +52,11 @@ sub run_x()
                             conns.Delete(k)
                         else
                             e.buf = e.buf + got
-                            if requestComplete(e.buf)
+                            ' pedidos enormes (ou maliciosos) não podem esgotar a memória da Roku
+                            if Len(e.buf) > 2000000
+                                c.close()
+                                conns.Delete(k)
+                            else if requestComplete(e.buf)
                                 resp = handleRequest(e.buf)
                                 sendAll(c, resp)
                                 c.close()
@@ -146,7 +150,13 @@ function handleRequest(buf as string) as string
     end if
     msg = ""
     if path = "/save"
-        msg = applyForm(parseQuery(query))
+        ' formulários enviados por POST: as chaves não ficam no histórico do navegador
+        form = parseQuery(query)
+        if method = "POST"
+            he = Instr(1, buf, Chr(13) + Chr(10) + Chr(13) + Chr(10))
+            form = parseQuery(Mid(buf, he + 4))
+        end if
+        msg = applyForm(form)
     else if path = "/restore" and method = "POST"
         he = Instr(1, buf, Chr(13) + Chr(10) + Chr(13) + Chr(10))
         body = Mid(buf, he + 4)
@@ -245,7 +255,7 @@ function page(msg as string) as string
 end function
 
 function formBlock(title as string, field as string, inputs as string) as string
-    return "<h2>" + title + "</h2><form action=/save><input type=hidden name=f value=" + field + ">" + inputs + "<button>Guardar</button></form>"
+    return "<h2>" + title + "</h2><form method=post action=/save><input type=hidden name=f value=" + field + ">" + inputs + "<button>Guardar</button></form>"
 end function
 
 ' ---------- Sincronização com a app Android (progresso, vistos, listas e favoritos IPTV) ----------

@@ -363,16 +363,22 @@ sub onSelected_x()
     else if action = "adultLock"
         if parentalPin() = ""
             showMessage("Controlo parental", "Define primeiro o PIN parental.")
+        else if cfgRead("adultLock", "0") = "1"
+            ' desligar a proteção pede o PIN (senão qualquer pessoa a desligava)
+            askPin("PIN parental para desligar a proteção", "pinAdultOff")
         else
             cycle("adultLock", ["0", "1"], "0")
             render()
         end if
     else if action = "reset"
-        cfgReset()
-        m.top.action = "logout"
-        m.top.changed = true
-        render()
-        showMessage("Definições", "As definições foram repostas.")
+        ' apagar tudo nunca acontece com um só clique: confirmação (e PIN, se houver)
+        dlg = CreateObject("roSGNode", "StandardMessageDialog")
+        dlg.title = "Repor predefinições?"
+        dlg.message = ["Apaga TUDO nesta TV: chave TorBox, contas, add-ons, listas IPTV, perfis, progresso e vistos. Não dá para desfazer.", "Sugestão: faz antes uma cópia de segurança em «Configurar pelo telemóvel»."]
+        dlg.buttons = ["Cancelar", "Apagar tudo"]
+        dlg.observeFieldScoped("buttonSelected", "onResetConfirm")
+        m.resetDlg = dlg
+        m.top.getScene().dialog = dlg
     end if
 end sub
 sub onSelected()
@@ -736,6 +742,19 @@ sub onPinDone_x()
         else
             showMessage("Perfis", "PIN errado.")
         end if
+    else if t = "pinAdultOff"
+        if pin = parentalPin()
+            cfgWrite("adultLock", "0")
+            render()
+        else
+            showMessage("PIN parental", "PIN errado.")
+        end if
+    else if t = "pinReset"
+        if pin = parentalPin()
+            doReset()
+        else
+            showMessage("PIN parental", "PIN errado.")
+        end if
     else if t = "pinSwitch"
         if pin = parentalPin()
             switchProfile(m.pendingProfile)
@@ -780,4 +799,28 @@ sub setProfilePin(pin as string)
         out.Push(p)
     end for
     cfgWrite("profiles", FormatJson(out))
+end sub
+
+sub onResetConfirm()
+    try
+        dlg = m.resetDlg
+        idx = dlg.buttonSelected
+        dlg.close = true
+        if idx <> 1 then return
+        if parentalPin() <> ""
+            askPin("PIN parental para apagar tudo", "pinReset")
+        else
+            doReset()
+        end if
+    catch e
+        reportCrash("SettingsScreen.onResetConfirm", e)
+    end try
+end sub
+
+sub doReset()
+    cfgReset()
+    m.top.action = "logout"
+    m.top.changed = true
+    render()
+    showMessage("Definições", "As definições foram repostas.")
 end sub

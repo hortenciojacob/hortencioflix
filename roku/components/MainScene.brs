@@ -313,11 +313,39 @@ sub onMenuSelected_x(event as object)
         pushScreen(s)
         s.start = true
     else if name = "settings"
-        s = CreateObject("roSGNode", "SettingsScreen")
-        s.observeField("changed", "onSettingsChanged")
-        s.observeField("action", "onSettingsAction")
-        pushScreen(s)
+        ' no perfil infantil, as Definições pedem o PIN parental (se existir)
+        if isKidProfile() and parentalPin() <> ""
+            dlg = CreateObject("roSGNode", "StandardPinPadDialog")
+            dlg.title = "Definições"
+            dlg.message = ["PIN parental"]
+            dlg.buttons = ["OK", "Cancelar"]
+            dlg.observeFieldScoped("buttonSelected", "onSettingsPin")
+            m.setPinDlg = dlg
+            m.top.dialog = dlg
+            return
+        end if
+        openSettings()
     end if
+end sub
+
+sub openSettings()
+    s = CreateObject("roSGNode", "SettingsScreen")
+    s.observeField("changed", "onSettingsChanged")
+    s.observeField("action", "onSettingsAction")
+    pushScreen(s)
+end sub
+
+sub onSettingsPin()
+    try
+        dlg = m.setPinDlg
+        ok = dlg.buttonSelected = 0 and strOr(dlg.pin) = parentalPin()
+        bad = dlg.buttonSelected = 0 and not ok
+        dlg.close = true
+        if ok then openSettings()
+        if bad then showInfo("Definições", "PIN errado.")
+    catch e
+        reportCrash("MainScene.onSettingsPin", e)
+    end try
 end sub
 sub onMenuSelected(event as object)
     try

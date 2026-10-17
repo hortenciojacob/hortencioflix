@@ -2,6 +2,8 @@
 
 ## Novidades da v0.18
 
+- 0.18.1 (auditoria, 4.ª parte — TV ao vivo): escrever o número de um canal já não contorna o PIN dos canais adultos; categorias enormes mostram as primeiras 1500 linhas (antes podiam bloquear a TV) com aviso para usar a pesquisa; Voltar na lista de canais vai primeiro às categorias; ▶ toca o canal em foco; o guia XMLTV lê o ficheiro todo (os teus canais podiam ficar sem guia num ficheiro grande) e passa a mostrar a descrição dos programas; o mini-guia também funciona ao entrar por número.
+
 - **Modo ambiente com OK para ver**: com a app parada (5 min por defeito), passam as imagens dos teus filmes e séries; **OK** abre o que está a passar e começa a ver, **▶** passa ao seguinte, Voltar sai. Definições › «Modo ambiente»: 3, 5 ou 10 min, ou desligado. (A proteção de ecrã da própria Roku continua a não aceitar teclas — por isso o modo ambiente aparece antes dela.)
 
 **Auditoria, 3.ª parte — página do título**

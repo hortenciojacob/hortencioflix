@@ -370,13 +370,19 @@ sub showChannels(list as object)
     locked = adultLocked()
     hideOff = cfgRead("hideOffline", "0") = "1"
     view = []
+    total = 0
     for each ch in list
         ok = true
         if locked and isAdultText(strOr(ch.name)) then ok = false
         if hideOff and m.offline.DoesExist(strOr(ch.url)) then ok = false
-        if ok then view.Push(ch)
+        if ok
+            total = total + 1
+            ' listas enormes: desenhar milhares de linhas bloqueia a TV — mostra as primeiras 1500
+            if view.Count() < 1500 then view.Push(ch)
+        end if
     end for
     m.view = view
+    if total > view.Count() then m.status.text = "A mostrar " + view.Count().ToStr() + " de " + total.ToStr() + " canais — usa «Pesquisar canal…» para os outros."
     favSet = {}
     for each f in getFavs()
         favSet[strOr(f.u)] = true
@@ -920,9 +926,16 @@ sub gotoNumber(n as integer)
             for i = 0 to g.channels.Count() - 1
                 ch = g.channels[i]
                 if ch.num <> invalid and ch.num = n
+                    ' o número não pode contornar o PIN dos canais adultos
+                    if adultLocked() and (isAdultText(strOr(ch.name)) or isAdultText(strOr(g.title)))
+                        showMessage("Canal n.º " + n.ToStr(), "Este canal está protegido pelo PIN parental.")
+                        return
+                    end if
                     chans = []
                     for each x in g.channels
-                        chans.Push({ name: x.name, url: x.url })
+                        e = ""
+                        if chans.Count() < 400 then e = nowText(x)
+                        chans.Push({ name: x.name, url: x.url, e: e })
                     end for
                     addRecent(ch)
                     m.top.playRequest = { url: ch.url, title: ch.name, format: guessStreamFormat(ch.url, ""), headers: [], kind: "live", channels: chans, chIndex: i, epgNow: nowText(ch) }
@@ -1132,6 +1145,13 @@ function onKeyEvent_x(key as string, press as boolean) as boolean
         return true
     else if key = "left" and m.channelsList.hasFocus()
         focusOn(m.groupsList)
+        return true
+    else if key = "back" and m.channelsList.hasFocus()
+        ' Voltar na lista de canais vai primeiro às categorias (não sai logo da TV ao vivo)
+        focusOn(m.groupsList)
+        return true
+    else if key = "play" and m.channelsList.hasFocus()
+        playChannelAt(m.channelsList.itemFocused)
         return true
     end if
     return false

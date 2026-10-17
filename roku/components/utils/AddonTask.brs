@@ -1207,15 +1207,18 @@ function loadXmlEpg(url as string, ids as object) as object
     guide = {}
     p = Instr(1, body, "<programme ")
     count = 0
-    while p > 0 and count < 20000
+    scanned = 0
+    ' só contam os programas dos canais pedidos (num guia grande, os nossos podem estar no fim do ficheiro)
+    while p > 0 and count < 20000 and scanned < 400000
         q = Instr(p, body, "</programme>")
         if q = 0 then exit while
-        block = Mid(body, p, q - p)
-        count = count + 1
-        tagEnd = Instr(1, block, ">")
-        tag = Left(block, tagEnd)
+        scanned = scanned + 1
+        tagEnd = Instr(p, body, ">")
+        tag = Mid(body, p, tagEnd - p + 1)
         ch = xmlAttr(tag, "channel")
-        if want.DoesExist(ch)
+        block = ""
+        if want.DoesExist(ch) then block = Mid(body, p, q - p)
+        if block <> ""
             st = xmltvTime(xmlAttr(tag, "start"))
             en = xmltvTime(xmlAttr(tag, "stop"))
             if en > now and st < now + 6 * 3600
@@ -1226,8 +1229,16 @@ function loadXmlEpg(url as string, ids as object) as object
                     t3 = Instr(t2, block, "</title>")
                     if t2 > 0 and t3 > t2 then title = xmlUnescape(Mid(block, t2 + 1, t3 - t2 - 1))
                 end if
+                desc = ""
+                d1 = Instr(1, block, "<desc")
+                if d1 > 0
+                    d2 = Instr(d1, block, ">")
+                    d3 = Instr(d2, block, "</desc>")
+                    if d2 > 0 and d3 > d2 then desc = Left(xmlUnescape(Mid(block, d2 + 1, d3 - d2 - 1)), 300)
+                end if
+                count = count + 1
                 if not guide.DoesExist(ch) then guide[ch] = []
-                guide[ch].Push({ t: title, s: st, e: en, d: "" })
+                guide[ch].Push({ t: title, s: st, e: en, d: desc })
             end if
         end if
         p = Instr(q, body, "<programme ")

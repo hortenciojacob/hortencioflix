@@ -253,7 +253,19 @@ end function
 function handleSync(method as string, path as string, query as string, buf as string) as string
     q = parseQuery(query)
     code = cfgRead("syncCode", "")
-    if code = "" or q.k = invalid or q.k <> code then return httpResponse("403 Forbidden", "application/json", "{" + Chr(34) + "ok" + Chr(34) + ":false}", "")
+    ' proteção contra adivinhar o código na rede: 5 tentativas erradas bloqueiam 10 minutos
+    now = CreateObject("roDateTime").AsSeconds()
+    if m.syncLockUntil <> invalid and now < m.syncLockUntil then return httpResponse("429 Too Many Requests", "application/json", "{" + Chr(34) + "ok" + Chr(34) + ":false}", "")
+    if code = "" or q.k = invalid or q.k <> code
+        if m.syncBad = invalid then m.syncBad = 0
+        m.syncBad = m.syncBad + 1
+        if m.syncBad >= 5
+            m.syncBad = 0
+            m.syncLockUntil = now + 600
+        end if
+        return httpResponse("403 Forbidden", "application/json", "{" + Chr(34) + "ok" + Chr(34) + ":false}", "")
+    end if
+    m.syncBad = 0
     if path = "/sync.json"
         d = { ok: true, v: 1, app: "hortencioflix-roku", version: appVersion(), progress: getProgress(), watched: cfgJsonArray(pkey("watched")), done: cfgJsonArray(pkey("doneRecent")), iptvLists: getIptvLists(), iptvFav: getFavs(), addons: getUserAddons() }
         return httpResponse("200 OK", "application/json; charset=utf-8", FormatJson(d), "")

@@ -62,7 +62,8 @@ end sub
 sub trimRegistry()
     sec = CreateObject("roRegistrySection", "streambox")
     reg = CreateObject("roRegistry")
-    order = ["searchHist", "badSrc", "iptvRecent", "trackPrefs", "watched", "progress", "iptvFav"]
+    ' do menos importante para o mais importante (as listas pessoais e os lembretes são os últimos)
+    order = ["searchHist", "badSrc", "homeKnown", "subDelays", "doneRecent", "iptvRecent", "trackPrefs", "watched", "progress", "iptvFav", "reminders", "lists"]
     for pass = 1 to 3
         for each base in order
             if reg.GetSpaceAvailable() >= 4000 then return
@@ -1225,6 +1226,20 @@ sub srcScore(name as string, q as integer, filename as string, delta as integer)
         for each kk in drop
             if st.Count() > 35 then st.Delete(kk)
         end for
+        ' nunca mais de 60 entradas (o registo da Roku é pequeno): tira as mais fracas
+        while st.Count() > 60
+            weakest = ""
+            wv = 99
+            for each kk in st
+                av = Abs(Int(numOr(st[kk], 0)))
+                if av < wv
+                    wv = av
+                    weakest = kk
+                end if
+            end for
+            if weakest = "" then exit while
+            st.Delete(weakest)
+        end while
     end if
     cfgWrite("srcStats", FormatJson(st))
 end sub

@@ -105,3 +105,10 @@ function screenIsActive() as boolean
     if p <> invalid and not p.visible then return false
     return true
 end function
+
+' Título em foco numa RowList como item (para a tecla ▶)
+function itemFromRowFocus(rowList as object) as dynamic
+    c = rowCell(rowList, rowList.rowItemFocused)
+    if c = invalid then return invalid
+    return { id: c.metaId, type: c.metaType, name: c.title, poster: c.HDPosterUrl, videoId: c.videoId, bg: c.bg, logo: c.logo }
+end function

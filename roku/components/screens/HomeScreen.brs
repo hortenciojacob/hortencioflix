@@ -400,6 +400,17 @@ function onKeyEvent_x(key as string, press as boolean) as boolean
         m.top.menuSelected = "settings"
         return true
     end if
+    if key = "play" and m.rows.hasFocus()
+        ' tecla ▶ num cartaz: abre e começa logo a reproduzir
+        it = itemFromRowFocus(m.rows)
+        if it <> invalid
+            it.autoPlay = true
+            ' «Continuar a ver» de uma série: continua o episódio certo
+            if strOr(it.videoId) <> "" then it.autoVideo = strOr(it.videoId)
+            m.top.itemSelected = it
+            return true
+        end if
+    end if
     if key = "up" and m.rows.hasFocus()
         m.focusTarget = m.menu
         m.menu.setFocus(true)

@@ -2,6 +2,8 @@
 
 ## Novidades da v0.17
 
+- 0.17.3 (auditoria, 1.ª parte): tecla ▶ do comando num cartaz do Início abre e começa logo (no «Continuar a ver» continua o episódio certo); ▶ na página do título começa já; Voltar nas sugestões vai primeiro aos botões; o registo da Roku (pouco espaço) já não cresce sem limite (estatísticas das fontes e listas novas entram na limpeza automática); a sincronização bloqueia 10 minutos depois de 5 códigos errados.
+
 - 0.17.2: **animação dobrada** — nos desenhos animados e anime, as fontes dobradas em português vêm primeiro (também no «Ver» e no próximo episódio). Definições › «Animação: preferir dobrado»: Português (Portugal ou Brasil), só de Portugal, só do Brasil, ou não.
 
 - 0.17.1: corrige o erro «HomeScreen.updateHero: Type Mismatch» que aparecia ao abrir o Explorar (o destaque do Início tentava atualizar-se com a lista a mudar).

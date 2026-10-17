@@ -1199,6 +1199,14 @@ function onKeyEvent_x(key as string, press as boolean) as boolean
         else if key = "up" and m.more.isInFocusChain()
             focusOn(m.buttons)
             return true
+        else if key = "back" and m.more.isInFocusChain()
+            ' Voltar nas sugestões leva primeiro aos botões (não sai logo da página)
+            focusOn(m.buttons)
+            return true
+        else if key = "play" and m.buttons.isInFocusChain()
+            ' tecla ▶ do comando: começa já (a melhor fonte)
+            startQuick(m.targetEp)
+            return true
         end if
         return false
     end if

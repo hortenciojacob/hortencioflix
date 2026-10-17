@@ -2,7 +2,12 @@
 ' biblioteca Stremio e listas IPTV.
 
 function appVersion() as string
-    return "0.6"
+    ' versão real do pacote instalado (manifest), em vez de um número fixo
+    v = CreateObject("roAppInfo").GetVersion()
+    if v = invalid or v = "" then return "?"
+    p = v.Split(".")
+    if p.Count() >= 3 and p[2] = "0" then return p[0] + "." + p[1]
+    return v
 end function
 
 function cinemetaUrl() as string

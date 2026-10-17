@@ -1392,7 +1392,12 @@ function loadRecommend(req as object) as object
     for each x in lists[0]
         id = sOr(x.id)
         if id <> "" and not skip.DoesExist(id)
-            it = { id: id, type: t, name: sOr(x.name), poster: sOr(x.poster), bg: "https://images.metahub.space/background/medium/" + id + "/img" }
+            inf = sOr(x.releaseInfo)
+            if sOr(x.imdbRating) <> ""
+                if inf <> "" then inf = inf + "   ·   "
+                inf = inf + "IMDb " + sOr(x.imdbRating)
+            end if
+            it = { id: id, type: t, name: sOr(x.name), poster: sOr(x.poster), bg: "https://images.metahub.space/background/medium/" + id + "/img", desc: sOr(x.description), info: inf }
             if second.DoesExist(id) then both.Push(it) else rest.Push(it)
         end if
     end for

@@ -117,7 +117,7 @@ sub onBecause_x(event as object)
     if res = invalid or res.items = invalid or res.items.Count() = 0 then return
     items = []
     for each x in res.items
-        items.Push({ id: x.id, type: x.type, name: x.name, poster: x.poster, videoId: "", progress: 0.0 })
+        items.Push({ id: x.id, type: x.type, name: x.name, poster: x.poster, videoId: "", progress: 0.0, desc: strOr(x.desc), info: strOr(x.info) })
     end for
     m.becauseRow = { title: m.becauseTitle, items: items }
     render()
@@ -261,6 +261,17 @@ sub updateHero_x()
     if c.hasField("progress") and c.progress > 0.01 then info = info + "   ·   " + Int(c.progress * 100).ToStr() + "% visto"
     m.heroInfo.text = info
     m.heroDesc.text = cleanText(c.desc)
+    ' sem sinopse (Continuar a ver, biblioteca, recomendações): vai buscá-la e guarda-a para a próxima vez
+    if strOr(c.desc) = "" and (t = "movie" or t = "series") and Left(id, 2) = "tt"
+        if m.heroCache = invalid then m.heroCache = {}
+        hit = m.heroCache[id]
+        if hit <> invalid
+            applyHeroMeta(hit, c)
+        else
+            m.heroMetaFor = id
+            m.heroMetaTask = startAddonTask({ kind: "meta", type: t, id: id.Split(":")[0] }, "onHeroMeta")
+        end if
+    end if
     if bg <> m.heroBg.uri
         m.heroBg.opacity = 0
         m.heroBg.uri = bg
@@ -376,3 +387,52 @@ function onKeyEvent(key as string, press as boolean) as boolean
     end try
     return handled
 end function
+
+sub onHeroMeta(event as object)
+    try
+        res = event.getData()
+        if res = invalid or not res.ok or res.meta = invalid then return
+        mt = res.meta
+        info = strOr(mt.releaseInfo)
+        if strOr(mt.runtime) <> ""
+            if info <> "" then info = info + "   ·   "
+            info = info + strOr(mt.runtime)
+        end if
+        if strOr(mt.imdbRating) <> ""
+            if info <> "" then info = info + "   ·   "
+            info = info + "IMDb " + strOr(mt.imdbRating)
+        end if
+        if mt.genres <> invalid and type(mt.genres) = "roArray"
+            gs = ""
+            n = 0
+            for each g in mt.genres
+                if n < 3
+                    if gs <> "" then gs = gs + ", "
+                    gs = gs + strOr(g)
+                    n = n + 1
+                end if
+            end for
+            if gs <> ""
+                if info <> "" then info = info + "   ·   "
+                info = info + gs
+            end if
+        end if
+        hit = { desc: strOr(mt.description), info: info }
+        if m.heroCache = invalid then m.heroCache = {}
+        if m.heroCache.Count() > 60 then m.heroCache = {}
+        id = strOr(m.heroMetaFor)
+        m.heroCache[id] = hit
+        c = focusedContent(m.rows)
+        if c <> invalid and strOr(c.metaId) = id then applyHeroMeta(hit, c)
+    catch e
+        reportCrash("HomeScreen.onHeroMeta", e)
+    end try
+end sub
+
+sub applyHeroMeta(hit as object, c as object)
+    m.heroDesc.text = cleanText(hit.desc)
+    info = hit.info
+    if info = "" then return
+    if c.hasField("progress") and c.progress > 0.01 then info = info + "   ·   " + Int(c.progress * 100).ToStr() + "% visto"
+    m.heroInfo.text = info
+end sub

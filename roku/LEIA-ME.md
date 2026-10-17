@@ -2,6 +2,8 @@
 
 ## Novidades da v0.15
 
+- 0.15.1: o destaque do Início mostra sempre a sinopse, o ano, a duração, a nota IMDb e os géneros (também em «Continuar a ver», na biblioteca e nas recomendações); o número da versão no Início passa a ser o verdadeiro.
+
 - **Organizar o Início** (Definições): escolhe que filas aparecem (✓/✗) e qual vem primeiro; «Repor o Início» volta ao normal. Por perfil.
 - **«Porque viste…»**: fila nova no Início com recomendações a partir do último filme ou série que acabaste (ou do que estás a ver).
 - **Proteção de ecrã própria**: com a app aberta e a TV parada, passam as imagens dos teus filmes e séries (Continuar a ver, biblioteca e catálogos), com movimento lento, o título e as horas.

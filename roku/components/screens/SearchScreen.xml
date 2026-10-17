@@ -13,18 +13,22 @@
     <children>
         <Label id="header" text="Pesquisar" translation="[80,48]" font="font:LargeBoldSystemFont" color="0xE50914FF" />
         <Label id="hint" translation="[80,110]" width="1760" font="font:SmallSystemFont" color="0x8A8D96FF"
-            text="* nova pesquisa   ·   o teclado da Roku aceita voz (botão do microfone no comando)" />
-        <LabelList id="history" translation="[80,200]" itemSize="[900,60]" numRows="12" visible="false"
+            text="Escreve e os resultados aparecem logo   ·   * teclado com voz (microfone do comando)" />
+        <!-- teclado no ecrã: os resultados atualizam enquanto escreves -->
+        <MiniKeyboard id="kbd" translation="[80,170]" />
+        <Label id="histTitle" text="Pesquisas recentes" translation="[80,640]" font="font:SmallBoldSystemFont" color="0x9A9DA6FF" visible="false" />
+        <LabelList id="history" translation="[80,680]" itemSize="[460,52]" numRows="6" visible="false"
             vertFocusAnimationStyle="floatingFocus" color="0xE6E7EAFF" focusedColor="0x0F1014FF"
-            font="font:MediumSystemFont" focusedFont="font:MediumBoldSystemFont" />
-        <Label id="focusTitle" translation="[80,150]" width="1760" font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
-        <SkeletonRows id="skeleton" translation="[80,210]" visible="false" />
-        <RowList id="rows" translation="[80,210]" itemComponentName="PosterItem"
-            numRows="2" itemSize="[1760,380]" rowItemSize="[[200,300]]" rowItemSpacing="[[24,0]]"
+            font="font:SmallSystemFont" focusedFont="font:SmallBoldSystemFont" />
+        <Label id="focusTitle" translation="[640,150]" width="1200" font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
+        <SkeletonRows id="skeleton" translation="[640,210]" visible="false" />
+        <RowList id="rows" translation="[640,210]" itemComponentName="PosterItem"
+            numRows="2" itemSize="[1220,380]" rowItemSize="[[190,285]]" rowItemSpacing="[[22,0]]"
             itemSpacing="[0,20]" showRowLabel="[true]" rowLabelOffset="[[0,12]]"
             rowLabelColor="0xC8CAD0FF" rowFocusAnimationStyle="floatingFocus"
             vertFocusAnimationStyle="floatingFocus" drawFocusFeedback="false" />
-        <Label id="status" translation="[0,540]" width="1920" horizAlign="center" font="font:MediumSystemFont"
+        <Label id="status" translation="[640,540]" width="1200" horizAlign="center" wrap="true" font="font:MediumSystemFont"
             color="0xC8CAD0FF" text="" />
+        <Timer id="typeTimer" duration="0.7" repeat="false" />
     </children>
 </component>

@@ -26,6 +26,8 @@ sub run_x()
         res = loadRecommend(req)
     else if kind = "translate"
         res = loadTranslation(req)
+    else if kind = "translateSeason"
+        res = loadSeasonTranslation(req)
     else if kind = "streams"
         res = loadStreams(req.addons, req.type, req.id, req)
     else if kind = "search"
@@ -1421,24 +1423,28 @@ function loadRecommend(req as object) as object
 end function
 
 ' Sinopse (e título) em português: TMDB (com chave) e/ou Trakt (com o Client ID da conta ligada).
-' Prefere português de Portugal; se não houver, do Brasil. Devolve { ok, name, desc, lang }.
+' Prefere português de Portugal; se não houver, do Brasil. Com Trakt junta a classificação etária.
+' Devolve { ok, name, desc, lang, cert }.
 function loadTranslation(req as object) as object
     id = sOr(req.id).Split(":")[0]
     if Left(id, 2) <> "tt" then return { ok: false }
     isSeries = sOr(req.type) = "series"
+    out = { ok: false, name: "", desc: "", lang: "", cert: "" }
     key = sOr(req.tmdbKey)
     if key <> ""
         for each lang in ["pt-PT", "pt-BR"]
-            d = httpJson("https://api.themoviedb.org/3/find/" + id + "?api_key=" + key + "&external_source=imdb_id&language=" + lang)
-            if d <> invalid
-                r = invalid
-                if isSeries and d.tv_results <> invalid and d.tv_results.Count() > 0 then r = d.tv_results[0]
-                if r = invalid and d.movie_results <> invalid and d.movie_results.Count() > 0 then r = d.movie_results[0]
-                if r = invalid and d.tv_results <> invalid and d.tv_results.Count() > 0 then r = d.tv_results[0]
-                if r <> invalid and sOr(r.overview) <> ""
-                    nm = sOr(r.title)
-                    if nm = "" then nm = sOr(r.name)
-                    return { ok: true, name: nm, desc: sOr(r.overview), lang: lang }
+            if not out.ok
+                d = httpJson("https://api.themoviedb.org/3/find/" + id + "?api_key=" + key + "&external_source=imdb_id&language=" + lang)
+                if d <> invalid
+                    r = invalid
+                    if isSeries and d.tv_results <> invalid and d.tv_results.Count() > 0 then r = d.tv_results[0]
+                    if r = invalid and d.movie_results <> invalid and d.movie_results.Count() > 0 then r = d.movie_results[0]
+                    if r = invalid and d.tv_results <> invalid and d.tv_results.Count() > 0 then r = d.tv_results[0]
+                    if r <> invalid and sOr(r.overview) <> ""
+                        nm = sOr(r.title)
+                        if nm = "" then nm = sOr(r.name)
+                        out = { ok: true, name: nm, desc: sOr(r.overview), lang: lang, cert: "" }
+                    end if
                 end if
             end if
         end for
@@ -1447,19 +1453,83 @@ function loadTranslation(req as object) as object
     if cid <> ""
         kindPath = "movies"
         if isSeries then kindPath = "shows"
-        arr = httpJsonAuth("https://api.trakt.tv/" + kindPath + "/" + id + "/translations/pt", { "trakt-api-version": "2", "trakt-api-key": cid, "Content-Type": "application/json" }, 8000)
-        if arr <> invalid and type(arr) = "roArray"
-            best = invalid
-            for each t in arr
-                if sOr(t.overview) <> ""
-                    if LCase(sOr(t.country)) = "pt" then best = t
-                    if best = invalid then best = t
-                end if
-            end for
-            if best <> invalid
-                return { ok: true, name: sOr(best.title), desc: sOr(best.overview), lang: "pt-" + UCase(sOr(best.country)) }
+        h = { "trakt-api-version": "2", "trakt-api-key": cid, "Content-Type": "application/json" }
+        if not out.ok
+            arr = httpJsonAuth("https://api.trakt.tv/" + kindPath + "/" + id + "/translations/pt", h, 8000)
+            if arr <> invalid and type(arr) = "roArray"
+                best = invalid
+                for each t in arr
+                    if sOr(t.overview) <> ""
+                        if LCase(sOr(t.country)) = "pt" then best = t
+                        if best = invalid then best = t
+                    end if
+                end for
+                if best <> invalid then out = { ok: true, name: sOr(best.title), desc: sOr(best.overview), lang: "pt-" + UCase(sOr(best.country)), cert: "" }
             end if
         end if
+        ' classificação etária (dos EUA, convertida para o estilo português)
+        sm = httpJsonAuth("https://api.trakt.tv/" + kindPath + "/" + id + "?extended=full", h, 8000)
+        if sm <> invalid and type(sm) = "roAssociativeArray"
+            out.cert = ptCert(sOr(sm.certification))
+            if out.cert <> "" then out.ok = true
+        end if
     end if
-    return { ok: false }
+    return out
+end function
+
+function ptCert(c as string) as string
+    u = UCase(c)
+    if u = "G" or u = "TV-Y" or u = "TV-G" then return "Todos"
+    if u = "TV-Y7" then return "M/6"
+    if u = "PG" or u = "TV-PG" then return "M/6"
+    if u = "PG-13" then return "M/12"
+    if u = "TV-14" then return "M/14"
+    if u = "R" then return "M/16"
+    if u = "NC-17" or u = "TV-MA" then return "M/18"
+    return ""
+end function
+
+' Nomes dos episódios de uma temporada em português: { "1": "Nome", "2": … }
+function loadSeasonTranslation(req as object) as object
+    id = sOr(req.id).Split(":")[0]
+    sn = sOr(req.season)
+    names = {}
+    key = sOr(req.tmdbKey)
+    if key <> ""
+        f = httpJson("https://api.themoviedb.org/3/find/" + id + "?api_key=" + key + "&external_source=imdb_id")
+        if f <> invalid and f.tv_results <> invalid and f.tv_results.Count() > 0
+            tid = Int(f.tv_results[0].id).ToStr()
+            for each lang in ["pt-PT", "pt-BR"]
+                if names.Count() = 0
+                    d = httpJson("https://api.themoviedb.org/3/tv/" + tid + "/season/" + sn + "?api_key=" + key + "&language=" + lang)
+                    if d <> invalid and d.episodes <> invalid
+                        for each e in d.episodes
+                            nm = sOr(e.name)
+                            ' o TMDB devolve «Episódio 3» quando não há tradução: não serve
+                            if nm <> "" and Left(LCase(nm), 8) <> "episódio" and Left(LCase(nm), 8) <> "episodio" then names[Int(e.episode_number).ToStr()] = nm
+                        end for
+                    end if
+                end if
+            end for
+        end if
+    end if
+    cid = sOr(req.traktId)
+    if names.Count() = 0 and cid <> ""
+        h = { "trakt-api-version": "2", "trakt-api-key": cid, "Content-Type": "application/json" }
+        arr = httpJsonAuth("https://api.trakt.tv/shows/" + id + "/seasons/" + sn + "?translations=pt", h, 10000)
+        if arr <> invalid and type(arr) = "roArray"
+            for each e in arr
+                best = ""
+                if e.translations <> invalid and type(e.translations) = "roArray"
+                    for each t in e.translations
+                        if sOr(t.title) <> ""
+                            if LCase(sOr(t.country)) = "pt" or best = "" then best = sOr(t.title)
+                        end if
+                    end for
+                end if
+                if best <> "" and e.number <> invalid then names[Int(e.number).ToStr()] = best
+            end for
+        end if
+    end if
+    return { ok: names.Count() > 0, names: names }
 end function

@@ -14,7 +14,28 @@ sub init_x()
     m.history.observeField("itemSelected", "onHistorySelected")
     m.top.observeField("focusedChild", "onFocusedChild")
     m.lastQuery = ""
-    m.focusTarget = m.rows
+    m.kbd = m.top.findNode("kbd")
+    m.histTitle = m.top.findNode("histTitle")
+    m.typeTimer = m.top.findNode("typeTimer")
+    m.kbd.observeField("text", "onTyping")
+    m.typeTimer.observeField("fire", "onTypePause")
+    m.focusTarget = m.kbd
+end sub
+
+' Pesquisa enquanto escreves: espera 0,7 s sem teclas e procura (2 letras ou mais)
+sub onTyping()
+    m.typeTimer.control = "stop"
+    m.typeTimer.control = "start"
+end sub
+
+sub onTypePause()
+    try
+        t = m.kbd.text.Trim()
+        if Len(t) < 2 or t = m.lastQuery then return
+        runSearch(t, false)
+    catch e
+        reportCrash("SearchScreen.onTypePause", e)
+    end try
 end sub
 sub init()
     try
@@ -41,6 +62,10 @@ sub onStart_x()
         ' página de ator/realizador
         m.header.text = q
         m.top.findNode("hint").text = "Filmografia (com chave TMDB) ou resultados de pesquisa pelo nome"
+        m.kbd.visible = false
+        m.rows.translation = [80, 210]
+        m.skeleton.translation = [80, 210]
+        m.focusTitle.translation = [80, 150]
         m.skeleton.visible = true
         m.lastQuery = q
         m.task = startAddonTask({ kind: "person", name: q, tmdbKey: cfgRead("tmdbKey", "") }, "onResults")
@@ -58,29 +83,24 @@ end sub
 
 sub showHistory()
     hist = getSearchHistory()
-    if hist.Count() = 0
-        openKeyboard()
-        return
-    end if
-    labels = ["Nova pesquisa…"]
+    m.focusTarget = m.kbd
+    m.kbd.setFocus(true)
+    if hist.Count() = 0 then return
+    labels = []
     for each h in hist
-        labels.Push(strOr(h))
+        if labels.Count() < 6 then labels.Push(strOr(h))
     end for
     m.history.content = labelContent(labels)
     m.history.visible = true
-    m.rows.visible = false
-    m.focusTitle.text = "Pesquisas recentes"
-    m.focusTarget = m.history
-    m.history.setFocus(true)
+    m.histTitle.visible = true
 end sub
 
 sub onHistorySelected_x()
     idx = m.history.itemSelected
-    if idx = 0
-        openKeyboard()
-    else
-        hist = getSearchHistory()
-        if idx - 1 < hist.Count() then runSearch(strOr(hist[idx - 1]))
+    hist = getSearchHistory()
+    if idx < hist.Count()
+        m.kbd.text = strOr(hist[idx])
+        runSearch(strOr(hist[idx]), true)
     end if
 end sub
 sub onHistorySelected()
@@ -107,9 +127,8 @@ sub onKeyboardButton_x()
     text = dlg.text.Trim()
     dlg.close = true
     if idx = 0 and text <> ""
-        runSearch(text)
-    else if m.rows.content = invalid and not m.history.visible
-        m.top.closeRequest = true
+        m.kbd.text = text
+        runSearch(text, true)
     end if
 end sub
 sub onKeyboardButton()
@@ -120,11 +139,10 @@ sub onKeyboardButton()
     end try
 end sub
 
-sub runSearch(text as string)
+sub runSearch(text as string, save as boolean)
     m.lastQuery = text
-    addSearchHistory(text)
+    if save then addSearchHistory(text)
     m.header.text = "Pesquisar: " + text
-    m.history.visible = false
     m.rows.visible = true
     m.status.text = ""
     m.focusTitle.text = ""
@@ -145,8 +163,11 @@ sub onResults_x(event as object)
     m.status.visible = false
     m.rows.visible = true
     m.rows.content = buildRowContent(res.rows)
-    m.focusTarget = m.rows
-    m.rows.setFocus(true)
+    ' enquanto se escreve, o foco fica no teclado; só vai para os resultados quando se pede
+    if not m.kbd.visible or not m.kbd.isInFocusChain()
+        m.focusTarget = m.rows
+        m.rows.setFocus(true)
+    end if
 end sub
 sub onResults(event as object)
     try
@@ -158,6 +179,8 @@ end sub
 
 sub onRowSelected_x()
     item = itemFromRowList(m.rows)
+    ' a pesquisa só entra nas recentes quando escolhes um resultado
+    if item <> invalid and m.lastQuery <> "" and m.kbd.visible then addSearchHistory(m.lastQuery)
     if item <> invalid then m.top.itemSelected = item
 end sub
 sub onRowSelected()
@@ -180,8 +203,31 @@ sub onRowFocused()
 end sub
 
 function onKeyEvent_x(key as string, press as boolean) as boolean
-    if press and key = "options"
+    if not press then return false
+    if key = "options"
         openKeyboard()
+        return true
+    end if
+    if not m.kbd.visible then return false
+    if key = "right" and m.kbd.isInFocusChain() and m.rows.content <> invalid
+        m.focusTarget = m.rows
+        m.rows.setFocus(true)
+        return true
+    else if key = "left" and m.rows.isInFocusChain()
+        m.focusTarget = m.kbd
+        m.kbd.setFocus(true)
+        return true
+    else if key = "down" and m.kbd.isInFocusChain() and m.history.visible
+        m.focusTarget = m.history
+        m.history.setFocus(true)
+        return true
+    else if key = "up" and m.history.isInFocusChain()
+        m.focusTarget = m.kbd
+        m.kbd.setFocus(true)
+        return true
+    else if key = "back" and m.rows.isInFocusChain()
+        m.focusTarget = m.kbd
+        m.kbd.setFocus(true)
         return true
     end if
     return false

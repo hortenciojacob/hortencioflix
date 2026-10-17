@@ -27,6 +27,7 @@ sub init_x()
     m.calUpcoming = []
     m.traktRows = []
     m.becauseRow = invalid
+    m.newRow = invalid
     m.heroKey = ""
     ' arranque rápido: mostra os catálogos guardados da última vez enquanto atualiza
     cached = ReadAsciiFile("cachefs:/home_rows.json")
@@ -86,6 +87,10 @@ sub loadExtras()
         if it.type = "series" and Left(it.id, 2) = "tt" and series.Count() < 25 then series.Push({ id: it.id })
     end for
     if series.Count() > 0 then m.calTask = startAddonTask({ kind: "calendar", items: series }, "onCalendar")
+    ' Novidades do ano (os filmes mais vistos deste ano no catálogo)
+    yr = CreateObject("roDateTime").GetYear().ToStr()
+    m.newTitle = "Novidades de " + yr
+    m.newTask = startAddonTask({ kind: "catalogurl", url: cinemetaUrl() + "/catalog/movie/year/genre=" + yr + ".json" }, "onNewRow")
     ' «Porque viste X»: recomendações a partir do último filme/série acabado (ou do que estás a ver)
     src = invalid
     ls = ParseJson(cfgRead(pkey("lastSeen"), ""))
@@ -183,6 +188,7 @@ sub render_x()
     cont = continueRowItems()
     if cont.Count() > 0 then rows.Push({ title: "Continuar a ver", items: cont })
     if m.calRecent.Count() > 0 then rows.Push({ title: "Novos episódios das tuas séries", items: m.calRecent })
+    if m.newRow <> invalid then rows.Push(m.newRow)
     if not isKidProfile()
         lib = libraryRowItems()
         if lib.Count() > 0 then rows.Push({ title: "A minha biblioteca (Stremio)", items: lib })
@@ -190,7 +196,9 @@ sub render_x()
         if m.becauseRow <> invalid then rows.Push(m.becauseRow)
     end if
     if m.calUpcoming.Count() > 0 then rows.Push({ title: "Em breve nas tuas séries", items: m.calUpcoming })
-    rows.Append(m.catalogRows)
+    for each r in m.catalogRows
+        rows.Push({ title: ptRowTitle(strOr(r.title)), items: r.items })
+    end for
     ' Início personalizado (Definições › Organizar o Início)
     rows = applyHomeLayout(rows)
     updateAccount()
@@ -427,6 +435,13 @@ sub onHeroMeta(event as object)
                 info = info + gs
             end if
         end if
+        if strOr(mt.type) = "movie"
+            ea = endsAtText(runtimeMinutes(strOr(mt.runtime)), 0.0)
+            if ea <> ""
+                if info <> "" then info = info + "   ·   "
+                info = info + ea
+            end if
+        end if
         hit = { desc: strOr(mt.description), info: info }
         if m.heroCache = invalid then m.heroCache = {}
         if m.heroCache.Count() > 60 then m.heroCache = {}
@@ -455,7 +470,7 @@ sub onHeroPt(event as object)
         id = strOr(m.ptFor)
         if id = "" then return
         if res <> invalid and res.ok = true
-            ptCacheSet(id, { name: strOr(res.name), desc: strOr(res.desc) })
+            ptCacheSet(id, { name: strOr(res.name), desc: strOr(res.desc), cert: strOr(res.cert) })
             c = focusedContent(m.rows)
             if c <> invalid and strOr(c.metaId) = id then m.heroDesc.text = cleanText(res.desc)
         else
@@ -463,5 +478,16 @@ sub onHeroPt(event as object)
         end if
     catch e
         reportCrash("HomeScreen.onHeroPt", e)
+    end try
+end sub
+
+sub onNewRow(event as object)
+    try
+        res = event.getData()
+        if res = invalid or res.items = invalid or res.items.Count() = 0 then return
+        m.newRow = { title: m.newTitle, items: res.items }
+        render()
+    catch e
+        reportCrash("HomeScreen.onNewRow", e)
     end try
 end sub

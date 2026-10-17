@@ -1,4 +1,15 @@
-# Hortêncioflix para Roku — v0.15
+# Hortêncioflix para Roku — v0.16
+
+## Novidades da v0.16
+
+- **Título em português** na página do filme/série (ex.: «O Cavaleiro das Trevas»), ao lado do original, com a **classificação etária** (M/12, M/16…).
+- **Nomes dos episódios em português**, por temporada (Trakt ou TMDB), guardados para a próxima vez.
+- **«Termina às 23:40»** nos filmes: a hora a que acaba se começares agora (conta com o que já viste).
+- **Filas dos add-ons em português**: «Trending» → «Em alta», «Top Rated» → «Mais bem avaliados», etc.
+- **Novidades do ano**: fila nova no Início com os filmes mais vistos deste ano.
+- **Pesquisa nova**: teclado no ecrã e resultados enquanto escreves (sem carregar em «Pesquisar»); as pesquisas recentes ficam por baixo do teclado. A tecla ✱ abre o teclado com voz.
+
+# v0.15
 
 ## Novidades da v0.15
 

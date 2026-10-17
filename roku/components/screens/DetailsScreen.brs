@@ -239,18 +239,25 @@ sub onMeta_x(event as object)
         g = joinNames(meta.genres, 4)
         if g <> "" then parts.Push(g)
         if libInLibrary(strOr(it.id)) then parts.Push("Na biblioteca")
-        info = ""
-        for each p in parts
-            if info <> "" then info = info + "   ·   "
-            info = info + p
-        end for
-        m.info.text = info
+        ' filmes: a que horas acaba se começar agora (contando com o que já foi visto)
+        if strOr(it.type) = "movie"
+            done = 0.0
+            for each pr in getProgress()
+                if strOr(pr.m) = strOr(it.id) and numOr(pr.d, 0) > 0 then done = numOr(pr.t, 0) / numOr(pr.d, 1)
+            end for
+            ea = endsAtText(runtimeMinutes(strOr(meta.runtime)), done)
+            if ea <> "" then parts.Push(ea)
+        end if
+        m.infoParts = parts
+        m.origName = strOr(meta.name)
+        renderInfo(invalid)
         m.desc.text = cleanText(meta.description)
-        ' sinopse em português (TMDB / Trakt), guardada para a próxima vez
+        ' sinopse e título em português (TMDB / Trakt) e classificação etária, guardados para a próxima vez
         if ptTranslationsOn() and Left(strOr(it.id), 2) = "tt"
             pt = ptCacheGet(strOr(it.id))
             if pt <> invalid
                 if strOr(pt.desc) <> "" then m.desc.text = cleanText(pt.desc)
+                renderInfo(pt)
             else
                 m.ptTask = ptTranslateTask(strOr(it.id), strOr(it.type), "onDetailsPt")
             end if
@@ -554,9 +561,16 @@ sub fillSeason(idx as integer)
     m.curSeason = idx
     labels = []
     seen = watchedSet()
+    requestSeasonPt(idx)
+    ptNames = invalid
+    if m.epPt <> invalid and m.seasons[idx].eps.Count() > 0 then ptNames = m.epPt[m.seasons[idx].eps[0].s.ToStr()]
     for each ep in m.seasons[idx].eps
         t = "E" + ep.e.ToStr()
-        if ep.name <> "" then t = t + "   " + ep.name
+        nm = ep.name
+        if ptNames <> invalid
+            if ptNames.DoesExist(ep.e.ToStr()) then nm = ptNames[ep.e.ToStr()]
+        end if
+        if nm <> "" then t = t + "   " + nm
         if seen.DoesExist(ep.s.ToStr() + ":" + ep.e.ToStr()) then t = t + "      · visto"
         labels.Push(t)
     end for
@@ -1337,12 +1351,67 @@ sub onDetailsPt(event as object)
         it = m.top.item
         if it = invalid then return
         if res <> invalid and res.ok = true
-            ptCacheSet(strOr(it.id), { name: strOr(res.name), desc: strOr(res.desc) })
-            m.desc.text = cleanText(res.desc)
+            pt = { name: strOr(res.name), desc: strOr(res.desc), cert: strOr(res.cert) }
+            ptCacheSet(strOr(it.id), pt)
+            if pt.desc <> "" then m.desc.text = cleanText(pt.desc)
+            renderInfo(pt)
         else
             ptCacheSet(strOr(it.id), { name: "", desc: "" })
         end if
     catch e
         reportCrash("DetailsScreen.onDetailsPt", e)
+    end try
+end sub
+
+' Linha de informação: título em português (se for diferente do original), classificação etária e o resto
+sub renderInfo(pt as dynamic)
+    parts = []
+    if pt <> invalid
+        nm = strOr(pt.name)
+        if nm <> "" and LCase(nm) <> LCase(strOr(m.origName)) then parts.Push(nm)
+        if strOr(pt.cert) <> "" then parts.Push(strOr(pt.cert))
+    end if
+    if m.infoParts <> invalid then parts.Append(m.infoParts)
+    info = ""
+    for each p in parts
+        if info <> "" then info = info + "   ·   "
+        info = info + p
+    end for
+    m.info.text = info
+end sub
+
+' Nomes dos episódios em português (por temporada, guardados)
+sub requestSeasonPt(idx as integer)
+    if not ptTranslationsOn() then return
+    it = m.top.item
+    id = strOr(it.id)
+    if Left(id, 2) <> "tt" or idx < 0 or idx >= m.seasons.Count() then return
+    if m.seasons[idx].eps.Count() = 0 then return
+    sn = m.seasons[idx].eps[0].s
+    key = id + "#s" + sn.ToStr()
+    if m.epPt = invalid then m.epPt = {}
+    if m.epPt.DoesExist(sn.ToStr()) then return
+    c = ptCacheGet(key)
+    if c <> invalid
+        m.epPt[sn.ToStr()] = c
+        return
+    end if
+    m.epPtFor = { key: key, s: sn.ToStr(), idx: idx }
+    m.epPtTask = ptSeasonTask(id, sn, "onSeasonPt")
+end sub
+
+sub onSeasonPt(event as object)
+    try
+        res = event.getData()
+        f = m.epPtFor
+        if f = invalid then return
+        names = {}
+        if res <> invalid and res.ok = true and res.names <> invalid then names = res.names
+        ptCacheSet(f.key, names)
+        if m.epPt = invalid then m.epPt = {}
+        m.epPt[f.s] = names
+        if m.curSeason = f.idx and names.Count() > 0 then refreshEpisodes()
+    catch e
+        reportCrash("DetailsScreen.onSeasonPt", e)
     end try
 end sub

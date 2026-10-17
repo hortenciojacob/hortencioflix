@@ -1365,6 +1365,51 @@ sub ptCacheSet(id as string, v as object)
     WriteAsciiFile("cachefs:/pt_desc.json", FormatJson(c))
 end sub
 
+' «Termina às 23:40»: a hora a que acaba, contando com o que falta ver
+function endsAtText(runtimeMin as integer, doneFrac as float) as string
+    if runtimeMin <= 0 then return ""
+    left = runtimeMin * (1 - doneFrac)
+    dt = CreateObject("roDateTime")
+    dt.ToLocalTime()
+    e = CreateObject("roDateTime")
+    e.FromSeconds(dt.AsSeconds() + Int(left * 60))
+    mi = e.GetMinutes()
+    ms = mi.ToStr()
+    if mi < 10 then ms = "0" + ms
+    return "Termina às " + e.GetHours().ToStr() + ":" + ms
+end function
+
+' «152 min», «2h 32min», «2 h» → minutos
+function runtimeMinutes(s as string) as integer
+    rxH = CreateObject("roRegex", "(\d+)\s*h(?:\s*(\d+))?", "i")
+    mh = rxH.Match(s)
+    if mh.Count() > 1
+        total = Int(Val(mh[1])) * 60
+        if mh.Count() > 2 and mh[2] <> "" then total = total + Int(Val(mh[2]))
+        return total
+    end if
+    rxM = CreateObject("roRegex", "(\d+)\s*min", "i")
+    mm = rxM.Match(s)
+    if mm.Count() > 1 then return Int(Val(mm[1]))
+    return 0
+end function
+
+function ptSeasonTask(id as string, season as integer, callback as string) as object
+    return startAddonTask({ kind: "translateSeason", id: id, season: season.ToStr(), tmdbKey: cfgRead("tmdbKey", ""), traktId: cfgRead("traktId", "") }, callback)
+end function
+
 function ptTranslateTask(id as string, t as string, callback as string) as object
     return startAddonTask({ kind: "translate", id: id, type: t, tmdbKey: cfgRead("tmdbKey", ""), traktId: cfgRead("traktId", "") }, callback)
+end function
+
+' Nomes das filas dos add-ons em português (só as palavras mais comuns; o resto fica como está)
+function ptRowTitle(t as string) as string
+    if t = "" then return t
+    pairs = [["Top Rated", "Mais bem avaliados"], ["Now Playing", "Nos cinemas"], ["Coming Soon", "Brevemente"], ["Upcoming", "Brevemente"], ["Trending", "Em alta"], ["Popular", "Populares"], ["Featured", "Em destaque"], ["Latest", "Novidades"], ["New Releases", "Estreias"], ["Recently Added", "Adicionados recentemente"], ["TV Shows", "Séries"], ["Shows", "Séries"], ["Series", "Séries"], ["Movies", "Filmes"], ["Movie", "Filme"], ["Anime", "Anime"], ["Documentaries", "Documentários"], ["Kids", "Infantil"], ["Watchlist", "Para ver"], ["Recommended", "Recomendados"], ["Top", "Top"]]
+    out = t
+    for each p in pairs
+        rx = CreateObject("roRegex", "\b" + p[0] + "\b", "i")
+        out = rx.ReplaceAll(out, p[1])
+    end for
+    return out
 end function

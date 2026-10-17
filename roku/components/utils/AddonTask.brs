@@ -24,6 +24,8 @@ sub run_x()
         res = loadMeta(req.addons, req.type, req.id)
     else if kind = "recommend"
         res = loadRecommend(req)
+    else if kind = "translate"
+        res = loadTranslation(req)
     else if kind = "streams"
         res = loadStreams(req.addons, req.type, req.id, req)
     else if kind = "search"
@@ -1416,4 +1418,48 @@ function loadRecommend(req as object) as object
         end for
     end for
     return { ok: out.Count() > 0, items: out }
+end function
+
+' Sinopse (e título) em português: TMDB (com chave) e/ou Trakt (com o Client ID da conta ligada).
+' Prefere português de Portugal; se não houver, do Brasil. Devolve { ok, name, desc, lang }.
+function loadTranslation(req as object) as object
+    id = sOr(req.id).Split(":")[0]
+    if Left(id, 2) <> "tt" then return { ok: false }
+    isSeries = sOr(req.type) = "series"
+    key = sOr(req.tmdbKey)
+    if key <> ""
+        for each lang in ["pt-PT", "pt-BR"]
+            d = httpJson("https://api.themoviedb.org/3/find/" + id + "?api_key=" + key + "&external_source=imdb_id&language=" + lang)
+            if d <> invalid
+                r = invalid
+                if isSeries and d.tv_results <> invalid and d.tv_results.Count() > 0 then r = d.tv_results[0]
+                if r = invalid and d.movie_results <> invalid and d.movie_results.Count() > 0 then r = d.movie_results[0]
+                if r = invalid and d.tv_results <> invalid and d.tv_results.Count() > 0 then r = d.tv_results[0]
+                if r <> invalid and sOr(r.overview) <> ""
+                    nm = sOr(r.title)
+                    if nm = "" then nm = sOr(r.name)
+                    return { ok: true, name: nm, desc: sOr(r.overview), lang: lang }
+                end if
+            end if
+        end for
+    end if
+    cid = sOr(req.traktId)
+    if cid <> ""
+        kindPath = "movies"
+        if isSeries then kindPath = "shows"
+        arr = httpJsonAuth("https://api.trakt.tv/" + kindPath + "/" + id + "/translations/pt", { "trakt-api-version": "2", "trakt-api-key": cid, "Content-Type": "application/json" }, 8000)
+        if arr <> invalid and type(arr) = "roArray"
+            best = invalid
+            for each t in arr
+                if sOr(t.overview) <> ""
+                    if LCase(sOr(t.country)) = "pt" then best = t
+                    if best = invalid then best = t
+                end if
+            end for
+            if best <> invalid
+                return { ok: true, name: sOr(best.title), desc: sOr(best.overview), lang: "pt-" + UCase(sOr(best.country)) }
+            end if
+        end if
+    end if
+    return { ok: false }
 end function

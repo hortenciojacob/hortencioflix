@@ -81,7 +81,11 @@ sub render_x()
         if cfgRead("traktToken", "") <> "" then tr = "ligado"
         items.Push("Trakt: " + tr)
         m.actions.Push("trakt")
-        items.Push("Chave TMDB (filmografias): " + mask(cfgRead("tmdbKey", "")))
+        pl = "precisa da chave TMDB ou da conta Trakt"
+        if cfgRead("tmdbKey", "") <> "" or cfgRead("traktId", "") <> "" then pl = yesNo(cfgRead("ptDesc", "1"))
+        items.Push("Sinopses em português: " + pl)
+        m.actions.Push("ptDesc")
+        items.Push("Chave TMDB (sinopses em português e filmografias): " + mask(cfgRead("tmdbKey", "")))
         m.actions.Push("tmdb")
         items.Push("Idioma das legendas: " + subLangLabel(subLangPref()))
         m.actions.Push("subLang")
@@ -241,6 +245,13 @@ sub onSelected_x()
         render()
     else if action = "homeLayout"
         openHomeLayout(0)
+    else if action = "ptDesc"
+        if cfgRead("tmdbKey", "") = "" and cfgRead("traktId", "") = ""
+            showMessage("Sinopses em português", "Os catálogos só trazem a sinopse em inglês. Para a ter em português, cria uma chave grátis em themoviedb.org (Definições › API) e cola-a em «Configurar pelo telemóvel» › Chave TMDB. Se tiveres o Trakt ligado, já funciona.")
+        else
+            cycle("ptDesc", ["1", "0"], "1")
+            render()
+        end if
     else if action = "postPlay" or action = "trailerAuto"
         cycle(action, ["1", "0"], "1")
         render()

@@ -1333,3 +1333,38 @@ sub setLastSeen(id as string, t as string, name as string)
     if id = "" or name = "" then return
     cfgWrite(pkey("lastSeen"), FormatJson({ id: id, type: t, name: name }))
 end sub
+
+' ---------- Sinopses em português (cache no disco temporário da app) ----------
+
+function ptTranslationsOn() as boolean
+    if cfgRead("ptDesc", "1") <> "1" then return false
+    return cfgRead("tmdbKey", "") <> "" or cfgRead("traktId", "") <> ""
+end function
+
+function ptCache() as object
+    if m.ptCache = invalid
+        m.ptCache = {}
+        raw = ReadAsciiFile("cachefs:/pt_desc.json")
+        if raw <> ""
+            j = ParseJson(raw)
+            if j <> invalid and type(j) = "roAssociativeArray" then m.ptCache = j
+        end if
+    end if
+    return m.ptCache
+end function
+
+' { name, desc } já traduzido ou invalid. Um registo vazio quer dizer «não há tradução» (não volta a pedir).
+function ptCacheGet(id as string) as dynamic
+    return ptCache()[id.Split(":")[0]]
+end function
+
+sub ptCacheSet(id as string, v as object)
+    c = ptCache()
+    if c.Count() > 400 then c.Clear()
+    c[id.Split(":")[0]] = v
+    WriteAsciiFile("cachefs:/pt_desc.json", FormatJson(c))
+end sub
+
+function ptTranslateTask(id as string, t as string, callback as string) as object
+    return startAddonTask({ kind: "translate", id: id, type: t, tmdbKey: cfgRead("tmdbKey", ""), traktId: cfgRead("traktId", "") }, callback)
+end function

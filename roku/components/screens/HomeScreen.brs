@@ -261,6 +261,16 @@ sub updateHero_x()
     if c.hasField("progress") and c.progress > 0.01 then info = info + "   ·   " + Int(c.progress * 100).ToStr() + "% visto"
     m.heroInfo.text = info
     m.heroDesc.text = cleanText(c.desc)
+    ' sinopse em português, quando há chave TMDB ou Trakt
+    if ptTranslationsOn() and Left(id, 2) = "tt" and (t = "movie" or t = "series")
+        pt = ptCacheGet(id)
+        if pt <> invalid
+            if strOr(pt.desc) <> "" then m.heroDesc.text = cleanText(pt.desc)
+        else
+            m.ptFor = id
+            m.ptTask = ptTranslateTask(id, t, "onHeroPt")
+        end if
+    end if
     ' sem sinopse (Continuar a ver, biblioteca, recomendações): vai buscá-la e guarda-a para a próxima vez
     if strOr(c.desc) = "" and (t = "movie" or t = "series") and Left(id, 2) = "tt"
         if m.heroCache = invalid then m.heroCache = {}
@@ -430,9 +440,28 @@ sub onHeroMeta(event as object)
 end sub
 
 sub applyHeroMeta(hit as object, c as object)
-    m.heroDesc.text = cleanText(hit.desc)
+    pt = invalid
+    if ptTranslationsOn() then pt = ptCacheGet(strOr(c.metaId))
+    if pt <> invalid and strOr(pt.desc) <> "" then m.heroDesc.text = cleanText(pt.desc) else m.heroDesc.text = cleanText(hit.desc)
     info = hit.info
     if info = "" then return
     if c.hasField("progress") and c.progress > 0.01 then info = info + "   ·   " + Int(c.progress * 100).ToStr() + "% visto"
     m.heroInfo.text = info
+end sub
+
+sub onHeroPt(event as object)
+    try
+        res = event.getData()
+        id = strOr(m.ptFor)
+        if id = "" then return
+        if res <> invalid and res.ok = true
+            ptCacheSet(id, { name: strOr(res.name), desc: strOr(res.desc) })
+            c = focusedContent(m.rows)
+            if c <> invalid and strOr(c.metaId) = id then m.heroDesc.text = cleanText(res.desc)
+        else
+            ptCacheSet(id, { name: "", desc: "" })
+        end if
+    catch e
+        reportCrash("HomeScreen.onHeroPt", e)
+    end try
 end sub

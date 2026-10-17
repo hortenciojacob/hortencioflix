@@ -2,6 +2,8 @@
 
 ## Novidades da v0.15
 
+- 0.15.2: sinopses em português (de Portugal; se não houver, do Brasil) no destaque do Início e na página do título, através da conta Trakt ligada ou de uma chave TMDB. Ficam guardadas para abrir logo da próxima vez. Pode desligar-se em Definições.
+
 - 0.15.1: o destaque do Início mostra sempre a sinopse, o ano, a duração, a nota IMDb e os géneros (também em «Continuar a ver», na biblioteca e nas recomendações); o número da versão no Início passa a ser o verdadeiro.
 
 - **Organizar o Início** (Definições): escolhe que filas aparecem (✓/✗) e qual vem primeiro; «Repor o Início» volta ao normal. Por perfil.

@@ -235,7 +235,7 @@ function page(msg as string) as string
     h = h + formBlock("Adicionar add-on Stremio", "addon", "<input name=v placeholder='https://…/manifest.json ou stremio://…'>")
     h = h + formBlock("Adicionar lista IPTV (M3U)", "m3u", "<input name=n placeholder='Nome da lista'><input name=v placeholder='URL da lista M3U'><input name=epg placeholder='URL do guia EPG (opcional, XMLTV sem .gz)'>")
     h = h + formBlock("Adicionar conta Xtream Codes", "xtream", "<input name=s placeholder='Servidor (http://exemplo.com:8080)'><input name=u placeholder='Utilizador'><input name=p placeholder='Palavra-passe' type=password>")
-    h = h + formBlock("Chave TMDB (filmografias de atores)", "tmdb", "<input name=v placeholder='API Key v3 de themoviedb.org'>")
+    h = h + formBlock("Chave TMDB (sinopses em português e filmografias de atores)", "tmdb", "<input name=v placeholder='API Key v3 de themoviedb.org'>")
     h = h + formBlock("App Trakt (Client ID e Secret)", "trakt", "<input name=id placeholder='Client ID'><input name=secret placeholder='Client Secret'><p>Cria em trakt.tv/oauth/applications (Redirect URI: urn:ietf:wg:oauth:2.0:oob).</p>")
     h = h + formBlock("Endereço de atualizações (opcional)", "update", "<input name=v placeholder='URL de um JSON {version, notes}'>")
     h = h + "<h2>Cópia de segurança</h2><form><p><a href=/backup.json>Descarregar cópia de segurança (JSON)</a></p></form>"

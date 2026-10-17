@@ -246,6 +246,15 @@ sub onMeta_x(event as object)
         end for
         m.info.text = info
         m.desc.text = cleanText(meta.description)
+        ' sinopse em português (TMDB / Trakt), guardada para a próxima vez
+        if ptTranslationsOn() and Left(strOr(it.id), 2) = "tt"
+            pt = ptCacheGet(strOr(it.id))
+            if pt <> invalid
+                if strOr(pt.desc) <> "" then m.desc.text = cleanText(pt.desc)
+            else
+                m.ptTask = ptTranslateTask(strOr(it.id), strOr(it.type), "onDetailsPt")
+            end if
+        end if
         ppl = ""
         cast = joinNames(meta.cast, 5)
         dir = joinNames(meta.director, 2)
@@ -1321,3 +1330,19 @@ function fltSortKey(s as object) as float
     end if
     return q * 1000 + gb
 end function
+
+sub onDetailsPt(event as object)
+    try
+        res = event.getData()
+        it = m.top.item
+        if it = invalid then return
+        if res <> invalid and res.ok = true
+            ptCacheSet(strOr(it.id), { name: strOr(res.name), desc: strOr(res.desc) })
+            m.desc.text = cleanText(res.desc)
+        else
+            ptCacheSet(strOr(it.id), { name: "", desc: "" })
+        end if
+    catch e
+        reportCrash("DetailsScreen.onDetailsPt", e)
+    end try
+end sub

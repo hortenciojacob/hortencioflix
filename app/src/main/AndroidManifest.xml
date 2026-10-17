@@ -43,6 +43,8 @@
         </activity>
         <activity android:name=".ui.DetailsActivity" android:exported="false" />
         <!-- aberto pelos cartões «Continuar a ver» do ecrã inicial do Android TV -->
+        <activity android:name=".ui.TrailerActivity" android:exported="false" android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden" android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
         <activity android:name=".ui.OpenActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:noHistory="true" />
         <activity android:name=".ui.PlayerActivity" android:exported="false" android:screenOrientation="sensorLandscape"
             android:launchMode="singleTask"

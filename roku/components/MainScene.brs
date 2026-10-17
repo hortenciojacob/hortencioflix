@@ -376,6 +376,7 @@ sub onPlayRequest_x(event as object)
         m.player.observeField("finished", "onPlayerFinished")
         m.player.observeField("pushJson", "onPushJson")
         m.player.observeField("scrobble", "onScrobble")
+        m.player.observeField("openTitle", "onPlayerOpenTitle")
         m.player.observeField("mode", "onPlayerMode")
         m.overlay.appendChild(m.player)
     end if
@@ -422,6 +423,16 @@ end sub
 
 sub onPlayerFinished_x()
     closePlayer()
+    ' «A seguir»: abre o título escolhido e começa a reproduzir
+    if m.pendingOpen <> invalid
+        a = m.pendingOpen
+        m.pendingOpen = invalid
+        m.top.launchArgs = a
+    end if
+end sub
+
+sub onPlayerOpenTitle(event as object)
+    m.pendingOpen = event.getData()
 end sub
 sub onPlayerFinished()
     try

@@ -47,6 +47,11 @@
         <Animation id="bgFade" duration="0.6" easeFunction="outQuad">
             <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[0.0, 1.0]" fieldToInterp="backdrop.opacity" />
         </Animation>
+        <!-- «Visualização rápida»: a imagem de fundo ganha vida com um movimento lento de câmara (a Roku não toca trailers do YouTube) -->
+        <Animation id="bgDrift" duration="24" repeat="true" easeFunction="inOutQuad">
+            <Vector2DFieldInterpolator key="[0.0, 0.5, 1.0]" keyValue="[[1.0,1.0],[1.12,1.12],[1.0,1.0]]" fieldToInterp="backdrop.scale" />
+            <Vector2DFieldInterpolator key="[0.0, 0.5, 1.0]" keyValue="[[0,0],[-60,-24],[0,0]]" fieldToInterp="backdrop.translation" />
+        </Animation>
         <MenuPanel id="menu" />
     </children>
 </component>

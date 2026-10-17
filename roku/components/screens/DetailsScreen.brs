@@ -22,6 +22,8 @@ sub init_x()
     m.hint = m.top.findNode("hint")
     m.menu = m.top.findNode("menu")
     m.bgFade = m.top.findNode("bgFade")
+    m.bgDrift = m.top.findNode("bgDrift")
+    m.backdrop.scaleRotateCenter = [960, 540]
 
     m.section.color = accentColor()
 
@@ -156,7 +158,10 @@ sub onItem()
 end sub
 
 sub onBgLoaded_x()
-    if m.backdrop.loadStatus = "ready" then m.bgFade.control = "start"
+    if m.backdrop.loadStatus = "ready"
+        m.bgFade.control = "start"
+        if cfgRead("trailerAuto", "1") = "1" then m.bgDrift.control = "start"
+    end if
 end sub
 sub onBgLoaded()
     try

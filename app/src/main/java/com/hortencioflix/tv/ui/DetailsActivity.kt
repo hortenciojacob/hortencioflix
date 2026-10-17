@@ -266,6 +266,7 @@ class DetailsActivity : BaseActivity() {
         if (::btnPlay.isInitialized) {
             updatePlayButton()
             if (currentSeason >= 0) showSeason(currentSeason)
+            schedulePreview()
         }
     }
 
@@ -296,6 +297,7 @@ class DetailsActivity : BaseActivity() {
                 showCast(f)
                 trailerId = findTrailer(f)
                 findViewById<View>(R.id.btn_trailer).visibility = if (trailerId.isNotEmpty()) View.VISIBLE else View.GONE
+                schedulePreview()
                 episodes = Addons.episodes(f)
                 loadSimilar(genres)
             } else {
@@ -355,11 +357,68 @@ class DetailsActivity : BaseActivity() {
 
     private fun openTrailer() {
         if (trailerId.isEmpty()) return
+        stopPreview()
         try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$trailerId")))
+            Trailer.open(this, trailerId)
         } catch (e: Exception) {
-            toast("Não há nenhuma app para abrir o trailer.")
+            try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$trailerId"))) }
+            catch (e2: Exception) { toast("Não há nenhuma app para abrir o trailer.") }
         }
+    }
+
+    // ---------- Pré-visualização do trailer (fundo vivo, sem som) ----------
+
+    private var previewOn = false
+    private val previewStart = Runnable { startPreview() }
+
+    private fun schedulePreview() {
+        if (trailerId.isEmpty() || !Trailer.autoEnabled()) return
+        val v = findViewById<View>(R.id.trailer_view)
+        v.removeCallbacks(previewStart)
+        // espera um pouco: só quem fica na página vê o trailer (e não gasta dados a quem passa rápido)
+        v.postDelayed(previewStart, 2500)
+    }
+
+    private fun startPreview() {
+        if (isFinishing || previewOn || trailerId.isEmpty()) return
+        val w = findViewById<android.webkit.WebView>(R.id.trailer_view) ?: return
+        try {
+            previewOn = true
+            Trailer.setup(w)
+            w.webViewClient = object : android.webkit.WebViewClient() {
+                override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                    // o YouTube demora a mostrar imagem: aparece suavemente só depois, sem ecrã preto
+                    if (previewOn) w.postDelayed({
+                        if (previewOn) {
+                            w.animate().alpha(1f).setDuration(1200).start()
+                            findViewById<View>(R.id.bg_image).animate().alpha(0f).setDuration(1200).start()
+                        }
+                    }, 2200)
+                }
+            }
+            w.alpha = 0f
+            w.visibility = View.VISIBLE
+            Trailer.load(w, trailerId, preview = true)
+        } catch (e: Throwable) {
+            previewOn = false   // sem WebView no aparelho: fica a imagem de fundo
+        }
+    }
+
+    private fun stopPreview() {
+        val w = findViewById<android.webkit.WebView>(R.id.trailer_view) ?: return
+        w.removeCallbacks(previewStart)
+        if (!previewOn) return
+        previewOn = false
+        w.animate().cancel()
+        w.alpha = 0f
+        w.visibility = View.GONE
+        try { w.loadUrl("about:blank") } catch (e: Throwable) {}
+        findViewById<View>(R.id.bg_image).animate().alpha(1f).setDuration(300).start()
+    }
+
+    override fun onPause() {
+        stopPreview()
+        super.onPause()
     }
 
     private fun sendToTv() {

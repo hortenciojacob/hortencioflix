@@ -107,6 +107,11 @@ class PlayerActivity : BaseActivity() {
     private var qualityCap = Int.MAX_VALUE
     private var prefetchFor = ""
     private var reachedLong = false
+    // «A seguir» no fim do filme
+    private var postPlay: PostPlay? = null
+    private var postPlayDone = false
+    private var recs: List<com.hortencioflix.tv.data.MetaItem>? = null
+    private var recsFor = ""
     private var prefetched: Pair<List<com.hortencioflix.tv.data.StreamItem>, List<com.hortencioflix.tv.data.SubtitleItem>>? = null
     private var origSubs: List<com.hortencioflix.tv.data.SubtitleItem> = emptyList()
     private lateinit var nextCard: View
@@ -118,6 +123,8 @@ class PlayerActivity : BaseActivity() {
             ticks++
             checkIntro()
             checkNextEpisode()
+            checkPostPlay()
+            postPlay?.tick()
             if (loadStartedAt > 0 && !reachedReady && System.currentTimeMillis() - loadStartedAt > (if (Session.live) 20000 else 30000)) onTimeout()
             if (reachedReady) loadStartedAt = 0
             if (ticks % 10 == 0) saveProgress(ticks % 30 == 0)
@@ -315,6 +322,9 @@ class PlayerActivity : BaseActivity() {
         appliedDelayFor = ""
         failedSources.clear()
         reachedLong = false
+        postPlayDone = false
+        postPlay?.dismiss()
+        if (recsFor != Session.meta?.id) recs = null
         prefetchFor = ""
         prefetched = null
         introStart = -1; introEnd = -1; outroStart = -1; recapStart = -1; recapEnd = -1
@@ -400,6 +410,50 @@ class PlayerActivity : BaseActivity() {
             val sb = try { Addons.subtitles(meta.type, id) } catch (e: Exception) { emptyList() }
             if (prefetchFor == id && st.isNotEmpty()) prefetched = st to sb
         }
+    }
+
+    /**
+     * Quando começam os créditos de um filme (ou do último episódio): o vídeo encolhe e aparecem
+     * recomendações para ver a seguir. As sugestões são preparadas a meio do filme, para estarem prontas.
+     */
+    private fun checkPostPlay() {
+        val p = player ?: return
+        if (Session.live || postPlayDone || inPip || Prefs.str("postPlay", "1") != "1") return
+        val meta = Session.meta ?: return
+        val isMovie = meta.type == "movie"
+        if (!isMovie && !(meta.type == "series" && nextEpisodeId() == null)) return
+        val dur = p.duration
+        if (dur <= 0 || dur == C.TIME_UNSET || dur < 20 * 60_000) return
+        val pos = p.currentPosition
+        if (recs == null && recsFor != meta.id && pos > dur / 2) {
+            recsFor = meta.id
+            lifecycleScope.launch {
+                recs = try { com.hortencioflix.tv.data.Addons.recommendFor(meta.type, meta.id) } catch (e: Exception) { emptyList() }
+            }
+        }
+        // início dos créditos: o marcador do IntroDB quando existe; senão os últimos ~4,5 % (entre 1 e 5 min)
+        val trigger = if (outroStart > 0 && outroStart < dur) dur - outroStart else (dur * 0.045).toLong().coerceIn(60_000L, 300_000L)
+        val left = dur - pos
+        if (left > trigger || left < 5_000) return
+        val list = recs ?: return
+        postPlayDone = true
+        if (list.isEmpty()) return
+        playerView.hideController()
+        postPlay = PostPlay(this, playerView, onPlay = { m -> playRecommendation(m) }, onDismiss = { postPlay = null; playerView.requestFocus() })
+            .also { it.show(list) }
+    }
+
+    private fun playRecommendation(m: com.hortencioflix.tv.data.MetaItem) {
+        Session.meta?.let { cur ->
+            Prefs.removeProgress(cur.id)
+            Prefs.setWatched(listOf(Session.videoId), true)
+            com.hortencioflix.tv.data.WatchNext.remove(this, cur.id)
+        }
+        scrobble("stop")
+        player?.pause()
+        player?.stop()
+        startActivity(Intent(this, DetailsActivity::class.java).putExtra("meta", m).putExtra("play", true))
+        finish()
     }
 
     private fun checkNextEpisode() {
@@ -1473,6 +1527,7 @@ class PlayerActivity : BaseActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (locked) { showUnlock(); return }
+        if (postPlay?.visible == true) { postPlay?.dismiss(); return }
         if (playerView.isControllerFullyVisible) {
             playerView.hideController()
             return

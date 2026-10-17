@@ -557,6 +557,27 @@ object Addons {
         metas(Http.getJson("$CINEMETA/catalog/$t/top/genre=${enc(g)}.json"), 40).filter { it.id != id }.shuffled().take(15)
     }
 
+    /**
+     * «A seguir» no fim de um filme: títulos do mesmo género (os que partilham os dois géneros principais
+     * primeiro), sem os que já viste. Com Trakt ligado, junta as recomendações da conta.
+     */
+    suspend fun recommendFor(type: String, id: String): List<MetaItem> = withContext(Dispatchers.IO) {
+        val f = try { meta(type, id) } catch (e: Exception) { null }
+        val g = f?.optJSONArray("genres")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
+        val t = if (type == "series") "series" else "movie"
+        val lists = g.take(2).map { genre -> metas(Http.getJson("$CINEMETA/catalog/$t/top/genre=${enc(genre)}.json"), 60) }
+        val first = lists.getOrNull(0) ?: emptyList()
+        val second = lists.getOrNull(1)?.map { it.id }?.toSet() ?: emptySet()
+        val watched = Prefs.array("watched").let { a -> (0 until a.length()).map { a.optString(it) }.toSet() }
+        val trakt = if (Trakt.linked) try { Trakt.recommendations().filter { it.type == t } } catch (e: Exception) { emptyList() } else emptyList()
+        val both = first.filter { it.id in second }
+        val rest = first.filter { it.id !in second }.shuffled()
+        (both.shuffled() + trakt.take(4) + rest)
+            .filter { it.id != id && it.id !in watched }
+            .distinctBy { it.id }
+            .take(8)
+    }
+
     /** Pesquisa com resultados juntos (sem repetidos), filmes e séries. */
     suspend fun searchMerged(query: String): List<MetaItem> {
         val rows = search(query)

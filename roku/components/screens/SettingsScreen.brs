@@ -115,6 +115,10 @@ sub render_x()
         m.actions.Push("rangePref")
         items.Push("Saltar introdução automaticamente: " + yesNo(cfgRead("autoSkip", "0")))
         m.actions.Push("autoSkip")
+        items.Push("«A seguir» no fim do filme (sugestões nos créditos): " + yesNo(cfgRead("postPlay", "1")))
+        m.actions.Push("postPlay")
+        items.Push("Fundo animado na página do título: " + yesNo(cfgRead("trailerAuto", "1")))
+        m.actions.Push("trailerAuto")
         items.Push("Tema de cor: " + themeName())
         m.actions.Push("theme")
         st = "Escuro"
@@ -229,6 +233,9 @@ sub onSelected_x()
         render()
     else if action = "audioLang"
         cycle("audioLang", ["any", "pt", "en", "es", "fr", "it"], "any")
+        render()
+    else if action = "postPlay" or action = "trailerAuto"
+        cycle(action, ["1", "0"], "1")
         render()
     else if action = "autoSkip"
         cycle("autoSkip", ["0", "1"], "0")

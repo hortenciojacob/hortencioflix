@@ -26,6 +26,20 @@ sub init_x()
     m.nextLabel = m.top.findNode("nextLabel")
     m.nextCount = m.top.findNode("nextCount")
     m.nextBtns = m.top.findNode("nextBtns")
+    m.postPlay = m.top.findNode("postPlay")
+    m.postHero = m.top.findNode("postHero")
+    m.postTitle = m.top.findNode("postTitle")
+    m.postBtns = m.top.findNode("postBtns")
+    m.postGrid = m.top.findNode("postGrid")
+    m.postTimer = m.top.findNode("postTimer")
+    m.postTimer.observeField("fire", "onPostTick")
+    m.postBtns.observeField("buttonSelected", "onPostButton")
+    m.postGrid.observeField("itemSelected", "onPostGrid")
+    m.postGrid.observeField("itemFocused", "onPostGridFocus")
+    m.top.findNode("postHead").color = accentColor()
+    m.recs = invalid
+    m.recsFor = ""
+    m.postDone = false
     m.countTimer = m.top.findNode("countTimer")
     m.sleepTimer = m.top.findNode("sleepTimer")
     m.graceTimer = m.top.findNode("graceTimer")
@@ -569,6 +583,166 @@ sub onPosition_x()
     end if
     checkSegments(curPos)
     checkNextCard(curPos)
+    checkPostPlay(curPos)
+end sub
+
+' ---------- «A seguir» no fim do filme ----------
+
+sub checkPostPlay(curPos as float)
+    if m.postDone or isLive() or isMini() then return
+    if cfgRead("postPlay", "1") <> "1" then return
+    t = strOr(m.md.metaType)
+    if t <> "movie" and not (t = "series" and not hasNextEpisode()) then return
+    dur = m.video.duration
+    if dur < 1200 then return
+    mid = strOr(m.md.metaId)
+    if m.recs = invalid and m.recsFor <> mid and curPos > dur / 2
+        m.recsFor = mid
+        ex = []
+        for each k in watchedIdsForExclude()
+            ex.Push(k)
+        end for
+        m.recTask = startAddonTask({ kind: "recommend", type: t, id: mid, exclude: ex }, "onRecs")
+    end if
+    trig = dur * 0.045
+    if trig < 60 then trig = 60
+    if trig > 300 then trig = 300
+    if m.segments <> invalid and m.segments.outro <> invalid
+        if m.segments.outro.s > 0 and m.segments.outro.s < dur then trig = dur - m.segments.outro.s
+    end if
+    left = dur - curPos
+    if left > trig or left < 5 then return
+    if m.recs = invalid then return
+    m.postDone = true
+    if m.recs.Count() = 0 then return
+    showPostPlay()
+end sub
+
+function watchedIdsForExclude() as object
+    out = []
+    for each x in cfgJsonArray(pkey("doneRecent"))
+        if out.Count() < 60 then out.Push(strOr(x))
+    end for
+    return out
+end function
+
+sub onRecs_x(event as object)
+    if m.recTask = invalid or not event.getRoSGNode().isSameNode(m.recTask) then return
+    res = event.getData()
+    m.recs = []
+    if res <> invalid and res.items <> invalid then m.recs = res.items
+end sub
+sub onRecs(event as object)
+    try
+        onRecs_x(event)
+    catch e
+        reportCrash("PlayerScreen.onRecs", e)
+    end try
+end sub
+
+sub showPostPlay()
+    hideNextCard()
+    hideSkip()
+    m.osd.visible = false
+    top = m.recs[0]
+    m.postHero.uri = strOr(top.bg)
+    m.postTitle.text = strOr(top.name)
+    root = CreateObject("roSGNode", "ContentNode")
+    for i = 1 to m.recs.Count() - 1
+        if i <= 6
+            c = root.createChild("ContentNode")
+            c.title = strOr(m.recs[i].name)
+            c.HDPosterUrl = strOr(m.recs[i].poster)
+        end if
+    end for
+    m.postGrid.content = root
+    m.postGrid.visible = root.getChildCount() > 0
+    ' o vídeo continua (créditos), pequeno à esquerda
+    m.video.enableUI = false
+    m.video.translation = [80, 220]
+    m.video.width = 700
+    m.video.height = 394
+    m.postCount = 15
+    m.postBtns.buttons = ["Ver agora  ·  15 s", "Ver os créditos"]
+    m.postPlay.visible = true
+    m.postBtns.setFocus(true)
+    m.postTimer.control = "start"
+end sub
+
+sub hidePostPlay()
+    m.postTimer.control = "stop"
+    m.postPlay.visible = false
+    m.video.translation = [0, 0]
+    m.video.width = 1920
+    m.video.height = 1080
+    m.video.enableUI = true
+    focusVideo()
+end sub
+
+sub onPostTick_x()
+    if m.postCount < 0 then return
+    m.postCount = m.postCount - 1
+    if m.postCount <= 0
+        m.postTimer.control = "stop"
+        goRecommendation(m.recs[0])
+        return
+    end if
+    m.postBtns.buttons = ["Ver agora  ·  " + m.postCount.ToStr() + " s", "Ver os créditos"]
+end sub
+sub onPostTick()
+    try
+        onPostTick_x()
+    catch e
+        reportCrash("PlayerScreen.onPostTick", e)
+    end try
+end sub
+
+sub onPostButton_x()
+    if not m.postPlay.visible then return
+    if m.postBtns.buttonSelected = 0
+        goRecommendation(m.recs[0])
+    else
+        hidePostPlay()
+    end if
+end sub
+sub onPostButton()
+    try
+        onPostButton_x()
+    catch e
+        reportCrash("PlayerScreen.onPostButton", e)
+    end try
+end sub
+
+sub onPostGrid_x()
+    i = m.postGrid.itemSelected + 1
+    if i >= 1 and i < m.recs.Count() then goRecommendation(m.recs[i])
+end sub
+sub onPostGrid()
+    try
+        onPostGrid_x()
+    catch e
+        reportCrash("PlayerScreen.onPostGrid", e)
+    end try
+end sub
+
+' ao escolher outra sugestão, a contagem pára
+sub onPostGridFocus()
+    if m.postPlay.visible and m.postGrid.hasFocus() and m.postCount > 0
+        m.postCount = -1
+        m.postTimer.control = "stop"
+        m.postBtns.buttons = ["Ver agora", "Ver os créditos"]
+    end if
+end sub
+
+sub goRecommendation(it as object)
+    m.postTimer.control = "stop"
+    m.postCount = -1
+    md = m.md
+    removeProgress(strOr(md.metaId))
+    addDone(strOr(md.metaId))
+    m.top.openTitle = { contentId: strOr(it.id), mediaType: strOr(it.type), title: strOr(it.name), poster: strOr(it.poster) }
+    m.video.control = "stop"
+    m.top.finished = true
 end sub
 sub onPosition()
     try
@@ -1714,6 +1888,20 @@ end sub
 function onKeyEvent_x(key as string, press as boolean) as boolean
     if not press then return false
     if isMini() then return false
+    if key = "back" and m.postPlay.visible
+        hidePostPlay()
+        return true
+    end if
+    if m.postPlay.visible
+        if key = "down" and m.postBtns.isInFocusChain() and m.postGrid.visible
+            m.postGrid.setFocus(true)
+            return true
+        else if key = "up" and m.postGrid.isInFocusChain()
+            m.postBtns.setFocus(true)
+            return true
+        end if
+        return false
+    end if
     if key = "back"
         if m.nextCard.visible
             cancelNextCard()

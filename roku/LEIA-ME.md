@@ -1,4 +1,12 @@
-# Hortêncioflix para Roku — v0.13
+# Hortêncioflix para Roku — v0.14
+
+## Novidades da v0.14
+
+- **«A seguir» no fim do filme**: nos créditos, o vídeo encolhe para a esquerda e aparecem recomendações do mesmo género; a primeira começa sozinha ao fim de 15 s. «Ver os créditos» ou Voltar devolvem o vídeo ao ecrã inteiro. Também no último episódio de uma série.
+- **Fundo animado** na página do título: a imagem ganha um movimento lento de câmara (a Roku não consegue tocar trailers do YouTube).
+- Opções novas em Definições para ligar/desligar as duas coisas.
+
+# v0.13
 
 ## Novidades da v0.13
 

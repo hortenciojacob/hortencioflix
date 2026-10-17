@@ -22,6 +22,8 @@ sub run_x()
         res = loadHome(req.addons)
     else if kind = "meta"
         res = loadMeta(req.addons, req.type, req.id)
+    else if kind = "recommend"
+        res = loadRecommend(req)
     else if kind = "streams"
         res = loadStreams(req.addons, req.type, req.id, req)
     else if kind = "search"
@@ -1351,4 +1353,62 @@ function tbCheck(key as string, hashes as dynamic) as object
         end if
     end for
     return { ok: true, ready: ready }
+end function
+
+' «A seguir» no fim de um filme: títulos dos mesmos géneros (os que partilham os dois primeiros géneros
+' vêm primeiro), sem o próprio nem os já vistos (req.exclude)
+function loadRecommend(req as object) as object
+    t = "movie"
+    if req.type = "series" then t = "series"
+    base = "https://v3-cinemeta.strem.io"
+    meta = httpJson(base + "/meta/" + t + "/" + req.id + ".json")
+    if meta = invalid or meta.meta = invalid then return { ok: false, items: [] }
+    g = meta.meta.genres
+    if g = invalid or type(g) <> "roArray" or g.Count() = 0 then return { ok: false, items: [] }
+    skip = {}
+    skip[req.id] = true
+    if req.exclude <> invalid
+        for each x in req.exclude
+            skip[sOr(x)] = true
+        end for
+    end if
+    lists = []
+    for i = 0 to 1
+        if i < g.Count()
+            d = httpJson(base + "/catalog/" + t + "/top/genre=" + urlEscape(sOr(g[i])) + ".json")
+            arr = []
+            if d <> invalid and d.metas <> invalid then arr = d.metas
+            lists.Push(arr)
+        end if
+    end for
+    second = {}
+    if lists.Count() > 1
+        for each x in lists[1]
+            if x.id <> invalid then second[sOr(x.id)] = true
+        end for
+    end if
+    both = []
+    rest = []
+    for each x in lists[0]
+        id = sOr(x.id)
+        if id <> "" and not skip.DoesExist(id)
+            it = { id: id, type: t, name: sOr(x.name), poster: sOr(x.poster), bg: "https://images.metahub.space/background/medium/" + id + "/img" }
+            if second.DoesExist(id) then both.Push(it) else rest.Push(it)
+        end if
+    end for
+    ' baralha um pouco, para não sugerir sempre os mesmos
+    out = []
+    for each lst in [both, rest]
+        n = lst.Count()
+        for i = n - 1 to 1 step -1
+            j = Rnd(i + 1) - 1
+            tmp = lst[i]
+            lst[i] = lst[j]
+            lst[j] = tmp
+        end for
+        for each x in lst
+            if out.Count() < 8 then out.Push(x)
+        end for
+    end for
+    return { ok: out.Count() > 0, items: out }
 end function

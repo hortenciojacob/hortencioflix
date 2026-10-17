@@ -8,6 +8,7 @@
         <field id="finished" type="boolean" alwaysNotify="true" />
         <field id="pushJson" type="string" alwaysNotify="true" />
         <field id="scrobble" type="assocarray" alwaysNotify="true" />
+        <field id="openTitle" type="assocarray" alwaysNotify="true" />
     </interface>
     <script type="text/brightscript" uri="pkg:/components/utils/Crash.brs" />
     <script type="text/brightscript" uri="pkg:/components/utils/Config.brs" />
@@ -45,6 +46,19 @@
             <Label id="nextCount" translation="[30,114]" width="580" font="font:SmallSystemFont" color="0xE6E7EAFF" />
             <ButtonGroup id="nextBtns" translation="[30,170]" layoutDirection="horiz" itemSpacings="[16]" minWidth="270" iconUri="" focusedIconUri="" />
         </Group>
+
+        <!-- «A seguir» no fim do filme: o vídeo (créditos) encolhe à esquerda e as sugestões aparecem à direita -->
+        <Group id="postPlay" visible="false">
+            <Rectangle width="1920" height="1080" color="0x07080CE6" />
+            <Label id="postHead" text="A SEGUIR" translation="[840,96]" font="font:SmallBoldSystemFont" color="0xE50914FF" />
+            <Poster id="postHero" translation="[840,140]" width="960" height="400" loadDisplayMode="scaleToZoom" />
+            <Label id="postTitle" translation="[840,560]" width="960" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+            <ButtonGroup id="postBtns" translation="[840,640]" layoutDirection="horiz" itemSpacings="[18]" minWidth="300" iconUri="" focusedIconUri="" />
+            <Label text="Mais para ti" translation="[840,760]" font="font:SmallSystemFont" color="0xB4B7BFFF" />
+            <MarkupGrid id="postGrid" translation="[840,800]" itemComponentName="PosterItem" itemSize="[150,225]" itemSpacing="[18,0]" numColumns="6" numRows="1" vertFocusAnimationStyle="fixedFocus" />
+            <Label id="postCredits" text="Créditos" translation="[80,600]" font="font:SmallSystemFont" color="0x9A9DA6FF" />
+        </Group>
+        <Timer id="postTimer" duration="1" repeat="true" />
 
         <Timer id="osdTimer" duration="5" repeat="false" />
         <Timer id="countTimer" duration="1" repeat="true" />

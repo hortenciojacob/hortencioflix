@@ -7,6 +7,7 @@ import com.hortencioflix.tv.data.Prefs
 /** «O que há de novo» — aparece uma vez depois de cada atualização. */
 object WhatsNew {
     private val NOTES = listOf(
+        "Desenhos animados e anime: as fontes dobradas em português vêm primeiro (Definições › Animação: preferir dobrado)",
         "Rede lenta: a app pergunta antes de baixar a qualidade (Definições: perguntar / mudar sozinha / nunca)",
         "🎬 Trailer no fundo: ao abrir um filme ou série, o trailer começa sem som por trás da página; o botão «Trailer» abre-o em ecrã inteiro, com som, dentro da app",
         "«A seguir» no fim do filme: quando começam os créditos, o vídeo encolhe e aparecem filmes recomendados — o primeiro começa sozinho ao fim de 15 s (Voltar continua os créditos)",

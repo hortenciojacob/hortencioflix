@@ -32,6 +32,7 @@ object AudioLang {
     fun matches(lang: String?, pref: String): Boolean = when (pref) {
         BR -> lang == BR || lang == POR
         PT -> lang == PT || lang == POR
+        "any" -> lang != null          // qualquer áudio em português
         else -> false
     }
 }

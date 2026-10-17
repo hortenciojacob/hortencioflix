@@ -711,7 +711,7 @@ sub fetchStreams(ep as dynamic)
     m.subsDone = false
     m.streamsDone = false
     m.streamList.content = invalid
-    m.streamTask = startAddonTask({ kind: "streams", type: it.type, id: id }, "onStreams")
+    m.streamTask = startAddonTask({ kind: "streams", type: it.type, id: id, animated: isAnimatedMeta(m.meta) }, "onStreams")
     m.subTask = startAddonTask({ kind: "subtitles", type: it.type, id: id }, "onSubs")
 end sub
 
@@ -997,7 +997,8 @@ sub playStream(sel as integer)
         episodes: eps,
         epIndex: epIndex,
         alts: alts,
-        altIndex: 0
+        altIndex: 0,
+        animated: isAnimatedMeta(m.meta)
     }
 end sub
 

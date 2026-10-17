@@ -1236,7 +1236,7 @@ sub startQualitySwitch(target as integer)
     if mt = "" then mt = "movie"
     m.qualTarget = target
     setStatus("A procurar a melhor fonte…")
-    m.qualTask = startAddonTask({ kind: "streams", type: mt, id: vid, ignoreMax: true }, "onQualityStreams")
+    m.qualTask = startAddonTask({ kind: "streams", type: mt, id: vid, ignoreMax: true, animated: boolOr(m.md.animated) }, "onQualityStreams")
 end sub
 
 sub onQualityStreams_x(event as object)
@@ -1367,7 +1367,7 @@ sub playNext()
     m.started = false
     setStatus("A procurar fontes para " + m.nextEp.label + "…")
     showOsd(strOr(m.md.metaName) + " — " + m.nextEp.label)
-    m.nextTask = startAddonTask({ kind: "streams", type: m.md.metaType, id: m.nextEp.id }, "onNextStreams")
+    m.nextTask = startAddonTask({ kind: "streams", type: m.md.metaType, id: m.nextEp.id, animated: boolOr(m.md.animated) }, "onNextStreams")
 end sub
 
 sub onNextStreams_x(event as object)

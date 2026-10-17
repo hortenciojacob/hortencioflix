@@ -103,6 +103,13 @@ sub render_x()
         m.actions.Push("hideRisky")
         items.Push("Idioma preferido nas fontes: " + audioLangLabel(cfgRead("audioLang", "any")))
         m.actions.Push("audioLang")
+        ad = cfgRead("animDub", "any")
+        al = "Português (Portugal ou Brasil)"
+        if ad = "pt" then al = "Português de Portugal"
+        if ad = "br" then al = "Português do Brasil"
+        if ad = "off" then al = "Não (como os outros filmes)"
+        items.Push("Animação: preferir dobrado: " + al)
+        m.actions.Push("animDub")
         dp2 = cfgRead("dubPref", "")
         dl = "Não"
         if dp2 = "br" then dl = "Português do Brasil"
@@ -272,6 +279,9 @@ sub onSelected_x()
         render()
     else if action = "rangePref"
         cycle("rangePref", ["auto", "dv", "hdr", "sdr", "off"], "auto")
+        render()
+    else if action = "animDub"
+        cycle("animDub", ["any", "pt", "br", "off"], "any")
         render()
     else if action = "dubPref"
         cycle("dubPref", ["", "br", "pt"], "")

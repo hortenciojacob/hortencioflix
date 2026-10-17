@@ -276,6 +276,7 @@ class SettingsActivity : BaseActivity() {
             else -> "Automático — o melhor que este ecrã mostra (" + (com.hortencioflix.tv.data.VideoRange.wanted("auto").ifEmpty { "?" }.let { mapOf("dv" to "Dolby Vision", "hdr" to "HDR", "sdr" to "SDR")[it] ?: it }) + ")"
         } + " — dentro da mesma qualidade, essas fontes passam à frente", tag = "rangePref"))
         rows.add(Row("Filtros fixos das fontes", com.hortencioflix.tv.data.SourceFilters.pinned().let { if (it.isEmpty()) "Nenhum — fixa-os no painel das fontes (📌)" else com.hortencioflix.tv.data.SourceFilters.describe(it) + " — tocar para soltar" }, tag = "pinFilters"))
+        rows.add(Row("Animação: preferir dobrado", when (Prefs.str("animDub", "any")) { "pt" -> "🇵🇹 Português de Portugal"; "br" -> "🇧🇷 Português do Brasil"; "off" -> "Não — como os outros filmes"; else -> "Português (Portugal ou Brasil)" } + " — desenhos animados e anime com as fontes dobradas primeiro", tag = "animDub"))
         rows.add(Row("Preferir áudio dobrado", when (Prefs.str("dubPref")) { "br" -> "🇧🇷 Português do Brasil"; "pt" -> "🇵🇹 Português de Portugal"; else -> "Não — a melhor qualidade primeiro" } + " — as fontes dobradas passam à frente", tag = "dubPref"))
         rows.add(Row("Esconder fontes que podem falhar", onOff(Prefs.hideRisky) + " — Dolby Vision sem HDR, AV1, 3D", tag = "risky"))
         rows.add(Row("Rede lenta: baixar a qualidade", when (Prefs.str("qualAuto", "ask")) { "auto" -> "Mudar sozinha"; "off" -> "Nunca"; else -> "Perguntar (padrão)" } + " — depois de 3 pausas para carregar em 3 minutos", tag = "qualAuto"))
@@ -428,6 +429,9 @@ class SettingsActivity : BaseActivity() {
                 Prefs.put("rangePref", listOf("auto", "dv", "hdr", "sdr", "off")[it]); refresh()
             }
             "pinFilters" -> { com.hortencioflix.tv.data.SourceFilters.setPinned(emptyMap()); toast("Filtros fixos removidos."); refresh() }
+            "animDub" -> choiceDialog("Animação: preferir dobrado", listOf("Português (Portugal ou Brasil)", "🇵🇹 Português de Portugal", "🇧🇷 Português do Brasil", "Não — como os outros filmes")) {
+                Prefs.put("animDub", listOf("any", "pt", "br", "off")[it]); refresh()
+            }
             "dubPref" -> choiceDialog("Preferir áudio dobrado", listOf("Não", "🇧🇷 Português do Brasil", "🇵🇹 Português de Portugal")) {
                 Prefs.put("dubPref", listOf("", "br", "pt")[it]); refresh()
             }

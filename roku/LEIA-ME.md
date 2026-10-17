@@ -2,6 +2,8 @@
 
 ## Novidades da v0.17
 
+- 0.17.2: **animação dobrada** — nos desenhos animados e anime, as fontes dobradas em português vêm primeiro (também no «Ver» e no próximo episódio). Definições › «Animação: preferir dobrado»: Português (Portugal ou Brasil), só de Portugal, só do Brasil, ou não.
+
 - 0.17.1: corrige o erro «HomeScreen.updateHero: Type Mismatch» que aparecia ao abrir o Explorar (o destaque do Início tentava atualizar-se com a lista a mudar).
 
 **Descobrir**

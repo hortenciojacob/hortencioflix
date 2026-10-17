@@ -326,6 +326,8 @@ function startAddonTask(req as object, callback as string) as object
     req.hasDebrid = hasDebridAccount()
     req.badSrc = cfgJsonArray("badSrc")
     req.dubPref = cfgRead("dubPref", "")
+    ' animação: preferência própria de áudio dobrado (ex.: desenhos animados sempre dobrados)
+    if boolOr(req.animated) and cfgRead("animDub", "any") <> "off" then req.dubPref = cfgRead("animDub", "any")
     req.rangePref = cfgRead("rangePref", "auto")
     req.pinFilters = pinnedFilters()
     req.srcStats = cfgRead("srcStats", "{}")
@@ -1526,4 +1528,14 @@ function dueReminders() as object
     end for
     if due.Count() > 0 or keep.Count() <> getReminders().Count() then cfgWrite("reminders", FormatJson(keep))
     return due
+end function
+
+' O título é animação (desenhos animados / anime)?
+function isAnimatedMeta(meta as dynamic) as boolean
+    if meta = invalid or meta.genres = invalid or type(meta.genres) <> "roArray" then return false
+    for each g in meta.genres
+        lg = LCase(strOr(g))
+        if lg = "animation" or lg = "anime" or lg = "animação" or lg = "animacao" then return true
+    end for
+    return false
 end function

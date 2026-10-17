@@ -597,7 +597,9 @@ function audioDub(s as string) as string
 end function
 
 function dubMatches(dub as string, pref as string) as boolean
-    if pref = "" or dub = "" then return false
+    if pref = "" or pref = "off" or dub = "" then return false
+    ' «any»: qualquer áudio em português (Portugal ou Brasil)
+    if pref = "any" then return true
     return dub = pref or dub = "por"
 end function
 

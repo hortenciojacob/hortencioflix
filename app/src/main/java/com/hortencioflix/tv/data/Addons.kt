@@ -339,7 +339,23 @@ object Addons {
     suspend fun meta(type: String, id: String): JSONObject? = coroutineScope {
         val bases = supporting("meta", type, id)
         val results = bases.map { b -> async(Dispatchers.IO) { Http.getJson("$b/meta/$type/${pathId(id)}.json")?.optJSONObject("meta") } }.awaitAll()
-        results.firstOrNull { it != null }
+        val m = results.firstOrNull { it != null }
+        // lembra se é animação, para a preferência de áudio dobrado nos desenhos animados
+        m?.optJSONArray("genres")?.let { g ->
+            val anim = (0 until g.length()).any { g.optString(it).lowercase() in setOf("animation", "anime", "animação") }
+            animatedIds[id.substringBefore(':')] = anim
+        }
+        m
+    }
+
+    /** Títulos que são animação (preenchido ao abrir a página do título). */
+    val animatedIds = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    /** Preferência de áudio dobrado para este título: a da animação, se for desenho animado; senão a geral. */
+    fun dubPrefFor(id: String): String {
+        val anim = animatedIds[id.substringBefore(':')] == true
+        val a = Prefs.str("animDub", "any")
+        return if (anim && a != "off") a else Prefs.str("dubPref")
     }
 
     fun quality(s: String): Int {
@@ -385,7 +401,7 @@ object Addons {
 
     /** Fontes (com cache de 10 min, partilhada entre o ecrã de detalhes e o leitor). */
     suspend fun streams(type: String, id: String, ignoreMax: Boolean = false, fresh: Boolean = false): List<StreamItem> {
-        val key = "$type|$id|$ignoreMax|${Prefs.maxQuality}|${Prefs.cachedOnly}|${Prefs.hideRisky}|${Prefs.hasDebrid()}|${Prefs.dataSaver && Prefs.onMeteredNetwork()}|${Prefs.str("dubPref")}|${Prefs.str("rangePref", "auto")}|${Prefs.str("pinFilters")}"
+        val key = "$type|$id|$ignoreMax|${Prefs.maxQuality}|${Prefs.cachedOnly}|${Prefs.hideRisky}|${Prefs.hasDebrid()}|${Prefs.dataSaver && Prefs.onMeteredNetwork()}|${dubPrefFor(id)}|${Prefs.str("rangePref", "auto")}|${Prefs.str("pinFilters")}"
         return cached(streamCache, key, fresh) { fetchStreams(type, id, ignoreMax) }
     }
 
@@ -456,7 +472,7 @@ object Addons {
         }
         val (ready0, notReady) = unique.partition { it.cached }
         // O que já falhou neste aparelho vai para o fim; o que já tocou bem sobe (sem mudar a ordem do resto).
-        val dub = Prefs.str("dubPref")
+        val dub = dubPrefFor(id)
         val ready = ready0.sortedWith(compareBy(
             { val sc = SourceStats.score(it); if (sc <= -3) 1 else 0 },
             // Preferência de áudio dobrado (PT-BR / PT-PT): essas fontes passam à frente

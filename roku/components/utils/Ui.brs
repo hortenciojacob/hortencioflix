@@ -19,21 +19,13 @@ function buildRowContent(rows as object) as object
 end function
 
 function itemFromRowList(rowList as object) as object
-    sel = rowList.rowItemSelected
-    if sel = invalid or rowList.content = invalid then return invalid
-    row = rowList.content.getChild(sel[0])
-    if row = invalid then return invalid
-    c = row.getChild(sel[1])
+    c = rowCell(rowList, rowList.rowItemSelected)
     if c = invalid then return invalid
     return { id: c.metaId, type: c.metaType, name: c.title, poster: c.HDPosterUrl, videoId: c.videoId, bg: c.bg, logo: c.logo }
 end function
 
 function focusedTitle(rowList as object) as string
-    f = rowList.rowItemFocused
-    if f = invalid or rowList.content = invalid then return ""
-    row = rowList.content.getChild(f[0])
-    if row = invalid then return ""
-    c = row.getChild(f[1])
+    c = rowCell(rowList, rowList.rowItemFocused)
     if c = invalid then return ""
     return c.title
 end function
@@ -79,12 +71,31 @@ sub openMenu(panel as object, menuId as string, title as string, items as object
 end sub
 
 ' Conteúdo do item focado numa RowList (para o destaque do Início)
+' Célula [linha, coluna] de uma RowList, sem falhar se o índice não for válido (lista vazia ou acabada de mudar)
+function rowCell(rowList as object, f as dynamic) as dynamic
+    if rowList = invalid or rowList.content = invalid then return invalid
+    if f = invalid or type(f) <> "roArray" or f.Count() < 2 then return invalid
+    if f[0] = invalid or f[1] = invalid then return invalid
+    r = Int(f[0])
+    c = Int(f[1])
+    if r < 0 or c < 0 or r >= rowList.content.getChildCount() then return invalid
+    row = rowList.content.getChild(r)
+    if row = invalid or c >= row.getChildCount() then return invalid
+    return row.getChild(c)
+end function
+
 function focusedContent(rowList as object) as dynamic
+    ' o foco pode ainda não existir (lista vazia ou acabada de ser substituída): nunca falhar
+    if rowList = invalid or rowList.content = invalid then return invalid
     f = rowList.rowItemFocused
-    if f = invalid or rowList.content = invalid then return invalid
-    row = rowList.content.getChild(f[0])
-    if row = invalid then return invalid
-    return row.getChild(f[1])
+    if f = invalid or type(f) <> "roArray" or f.Count() < 2 then return invalid
+    if f[0] = invalid or f[1] = invalid then return invalid
+    r = Int(f[0])
+    c = Int(f[1])
+    if r < 0 or c < 0 or r >= rowList.content.getChildCount() then return invalid
+    row = rowList.content.getChild(r)
+    if row = invalid or c >= row.getChildCount() then return invalid
+    return row.getChild(c)
 end function
 
 ' O ecrã está à frente (visível e o leitor não está em ecrã inteiro)?

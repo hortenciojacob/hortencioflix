@@ -2,6 +2,8 @@
 
 ## Novidades da v0.17
 
+- 0.17.1: corrige o erro «HomeScreen.updateHero: Type Mismatch» que aparecia ao abrir o Explorar (o destaque do Início tentava atualizar-se com a lista a mudar).
+
 **Descobrir**
 - **Filmografia pelo Trakt**: a página de um ator/realizador mostra os filmes e séries em que entrou (mais recentes primeiro), mesmo sem chave TMDB.
 - **Coleções / sagas** (com chave TMDB): na página de um filme aparece «Coleção: …» com todas as partes por ordem de estreia.

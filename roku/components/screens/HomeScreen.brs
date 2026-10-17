@@ -256,6 +256,8 @@ sub onRowFocused()
 end sub
 
 sub updateHero_x()
+    ' com outro ecrã por cima (Explorar, Pesquisa…) o destaque não precisa de mudar
+    if not m.top.visible then return
     c = focusedContent(m.rows)
     if c = invalid then return
     id = strOr(c.metaId)

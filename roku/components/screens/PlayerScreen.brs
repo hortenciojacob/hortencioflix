@@ -49,6 +49,10 @@ sub init_x()
     m.subWaitTimer = m.top.findNode("subWaitTimer")
     m.startDog = m.top.findNode("startDog")
     m.startDog.observeField("fire", "onStartDog")
+    m.stallDog = m.top.findNode("stallDog")
+    m.stallDog.observeField("fire", "onStallDog")
+    m.netTimer = m.top.findNode("netTimer")
+    m.netTimer.observeField("fire", "onNetTimer")
     m.subWaitTimer.observeField("fire", "onSubWait")
 
     accent = accentColor()
@@ -478,6 +482,27 @@ sub onState_x()
         sourceNotReady()
         return
     end if
+    ' retomar depois de uma pausa longa: a ligação ao servidor (e o link do debrid) já expirou —
+    ' em vez de ficar parado a carregar, volta a abrir a mesma fonte no mesmo ponto
+    nowS = CreateObject("roDateTime").AsSeconds()
+    if st = "paused"
+        m.pausedAt = nowS
+        m.stallDog.control = "stop"
+    else if (st = "buffering" or st = "playing") and numOr(m.pausedAt, 0) > 0
+        pausedFor = nowS - m.pausedAt
+        m.pausedAt = 0
+        if pausedFor >= 300 and m.started and not isLive() and st = "buffering"
+            reloadSame("pausa de " + Int(pausedFor / 60).ToStr() + " min")
+            return
+        end if
+    end if
+    if st = "buffering" and m.started
+        ' carregar a meio por demasiado tempo = ligação parada: vigia 30 s
+        m.stallDog.control = "stop"
+        m.stallDog.control = "start"
+    else if st = "playing"
+        m.stallDog.control = "stop"
+    end if
     if st = "playing"
         m.startDog.control = "stop"
         m.status.visible = false
@@ -507,10 +532,21 @@ sub onState_x()
             return
         end if
         ' já estava a tocar e a ligação caiu: continua noutra fonte no mesmo ponto, sem diálogo
-        if m.started and not isLive() and kind <> "drm" and hasAltSource() and m.autoTries < 8
-            m.attempting = true
-            sourceFailed("erro a meio: " + kind)
-            return
+        if m.started and kind <> "drm"
+            if not netUp()
+                waitForNet()
+                return
+            end if
+            ' primeiro a mesma fonte (o link pode só ter expirado); só depois outra
+            if nowS - numOr(m.lastReloadAt, 0) > 120
+                reloadSame("erro a meio: " + kind)
+                return
+            end if
+            if not isLive() and hasAltSource() and m.autoTries < 8
+                m.attempting = true
+                sourceFailed("erro a meio: " + kind)
+                return
+            end if
         end if
         setStatus("Erro de reprodução: " + strOr(m.video.errorMsg) + " (" + strOr(m.video.errorCode) + ")")
         showErrorDialog(kind)
@@ -1005,6 +1041,8 @@ sub onClosing_x()
         m.sleepTimer.control = "stop"
         ' nenhum temporizador do leitor pode disparar depois de o fechar
         m.startDog.control = "stop"
+        m.stallDog.control = "stop"
+        m.netTimer.control = "stop"
         m.postTimer.control = "stop"
         m.cgTimer.control = "stop"
         m.attempting = false
@@ -2220,4 +2258,82 @@ sub applySavedDelay()
     m.subBasePath = strOr(m.curTracks[ti].TrackName)
     m.subOffset = ms
     m.shiftTask = startAddonTask({ kind: "shiftsub", src: m.subBasePath, ms: ms }, "onShifted")
+end sub
+
+' ---------- Recuperar de pausas longas, quedas de rede e ligações paradas ----------
+
+function netUp() as boolean
+    di = CreateObject("roDeviceInfo")
+    if not di.GetLinkStatus() then return false
+    if FindMemberFunction(di, "GetInternetStatus") <> invalid then return di.GetInternetStatus()
+    return true
+end function
+
+' Volta a abrir a MESMA fonte no ponto onde estava (link novo do debrid, ligação nova)
+sub reloadSame(why as string)
+    pos = Int(m.video.position)
+    if pos < 1 then pos = Int(numOr(m.lastPos, 0))
+    logEvent("A retomar a mesma fonte (" + why + ") em " + formatTime(pos))
+    if m.started and not isLive() then saveLocal(false)
+    m.lastReloadAt = CreateObject("roDateTime").AsSeconds()
+    m.stallDog.control = "stop"
+    if not isLive() and pos > 5 then m.qualResume = pos
+    m.video.control = "stop"
+    m.attempting = false
+    m.started = false
+    m.fromRetry = true
+    setStatus("A retomar…")
+    md = m.md
+    md.reloadAt = m.lastReloadAt
+    m.top.media = md
+end sub
+
+sub onStallDog()
+    try
+        if not m.started or m.video.state <> "buffering" then return
+        if not netUp()
+            waitForNet()
+            return
+        end if
+        now = CreateObject("roDateTime").AsSeconds()
+        if now - numOr(m.lastReloadAt, 0) > 120
+            reloadSame("parou a carregar")
+        else if not isLive() and hasAltSource()
+            sourceFailed("parou a carregar outra vez")
+        else
+            setStatus("A ligação está muito lenta…")
+        end if
+    catch e
+        reportCrash("PlayerScreen.onStallDog", e)
+    end try
+end sub
+
+' Sem Internet: espera que volte e continua sozinho no mesmo ponto
+sub waitForNet()
+    if m.netWaitPos = invalid or m.netWaitPos < 1
+        m.netWaitPos = Int(m.video.position)
+        if m.netWaitPos < 1 then m.netWaitPos = Int(numOr(m.lastPos, 0))
+    end if
+    if m.started and not isLive() then saveLocal(false)
+    m.video.control = "pause"
+    m.attempting = false
+    setStatus("Sem ligação à Internet — continuo sozinho quando voltar.")
+    logEvent("Sem Internet a meio do vídeo — à espera")
+    m.netTimer.control = "start"
+end sub
+
+sub onNetTimer()
+    try
+        if not netUp() then return
+        m.netTimer.control = "stop"
+        pos = numOr(m.netWaitPos, 0)
+        m.netWaitPos = 0
+        if not isLive() and pos > 5
+            m.lastPos = pos
+            m.started = true
+        end if
+        reloadSame("a Internet voltou")
+    catch e
+        reportCrash("PlayerScreen.onNetTimer", e)
+    end try
 end sub

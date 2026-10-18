@@ -2,6 +2,8 @@
 
 ## Novidades da v0.18
 
+- 0.18.3 — **retomar sem falhas**: depois de uma pausa longa (5 min ou mais), a app volta a abrir a mesma fonte no mesmo ponto (a ligação e o link do debrid já tinham expirado); se a Internet cair, o vídeo pausa com «Sem ligação — continuo sozinho quando voltar» e retoma sozinho quando a rede volta; se ficar mais de 30 s a carregar a meio, reabre a mesma fonte e, se voltar a parar, passa a outra; erros a meio tentam primeiro a mesma fonte (link novo) antes de mudar.
+
 - 0.18.2 (auditoria, 5.ª parte — definições e segurança): «Repor predefinições» passa a pedir confirmação (e o PIN, se houver) — antes apagava tudo com um clique; desligar a proteção dos canais adultos pede o PIN; no perfil infantil, as Definições pedem o PIN; a página «Configurar pelo telemóvel» envia as chaves por POST (não ficam no histórico do navegador); o servidor da rede local recusa pedidos enormes.
 
 - 0.18.1 (auditoria, 4.ª parte — TV ao vivo): escrever o número de um canal já não contorna o PIN dos canais adultos; categorias enormes mostram as primeiras 1500 linhas (antes podiam bloquear a TV) com aviso para usar a pesquisa; Voltar na lista de canais vai primeiro às categorias; ▶ toca o canal em foco; o guia XMLTV lê o ficheiro todo (os teus canais podiam ficar sem guia num ficheiro grande) e passa a mostrar a descrição dos programas; o mini-guia também funciona ao entrar por número.

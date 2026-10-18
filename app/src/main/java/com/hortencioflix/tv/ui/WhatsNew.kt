@@ -7,6 +7,7 @@ import com.hortencioflix.tv.data.Prefs
 /** «O que há de novo» — aparece uma vez depois de cada atualização. */
 object WhatsNew {
     private val NOTES = listOf(
+        "Retomar sem falhas: depois de uma pausa longa ou de uma queda da Internet, o vídeo volta a abrir sozinho no mesmo ponto",
         "Desenhos animados e anime: as fontes dobradas em português vêm primeiro (Definições › Animação: preferir dobrado)",
         "Rede lenta: a app pergunta antes de baixar a qualidade (Definições: perguntar / mudar sozinha / nunca)",
         "🎬 Trailer no fundo: ao abrir um filme ou série, o trailer começa sem som por trás da página; o botão «Trailer» abre-o em ecrã inteiro, com som, dentro da app",

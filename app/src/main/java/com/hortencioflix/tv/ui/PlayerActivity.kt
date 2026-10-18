@@ -102,6 +102,8 @@ class PlayerActivity : BaseActivity() {
     private var nextCountdown = -1
     private var subDelayMs = 0L
     private var netRetries = 0
+    private var pausedAt = 0L
+    private var sameRetriedAt = 0L
     private var appliedDelayFor = ""
     private val failedSources = HashSet<Int>()
     private var qualityCap = Int.MAX_VALUE
@@ -279,6 +281,20 @@ class PlayerActivity : BaseActivity() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (!Session.live && reachedReady) scrobble(if (isPlaying) "start" else "pause")
+            }
+
+            // Retomar depois de uma pausa longa: a ligação e o link do debrid já expiraram — abre de novo
+            // a mesma fonte no mesmo ponto, em vez de ficar parado a carregar ou dar erro.
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (!playWhenReady) { pausedAt = now; return }
+                val pausedFor = if (pausedAt > 0) now - pausedAt else 0L
+                pausedAt = 0L
+                if (pausedFor >= 300_000 && reachedReady && !Session.live) {
+                    val pos = player?.currentPosition ?: 0L
+                    PlayLog.add("⏯ Pausa de ${pausedFor / 60000} min — a reabrir a mesma fonte em ${pos / 60000} min")
+                    handler.post { if (!isFinishing && !isDestroyed) playStream(streamIndex, pos) }
+                }
             }
         })
         startPlayback()
@@ -842,7 +858,37 @@ class PlayerActivity : BaseActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
+    private fun networkUp(): Boolean = try {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        if (Build.VERSION.SDK_INT >= 23) cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        else cm.activeNetworkInfo?.isConnected == true
+    } catch (e: Exception) { true }
+
+    private var netWaitPos = -1L
+    private val netCheck = object : Runnable {
+        override fun run() {
+            if (isFinishing || isDestroyed || netWaitPos < 0) return
+            if (networkUp()) {
+                val pos = netWaitPos
+                netWaitPos = -1L
+                PlayLog.add("📶 A Internet voltou — a continuar em ${pos / 60000} min")
+                if (Session.live) playChannel(channelIndex) else playStream(streamIndex, pos)
+            } else handler.postDelayed(this, 3000)
+        }
+    }
+
+    private fun waitForNetwork(pos: Long) {
+        if (netWaitPos >= 0) return
+        netWaitPos = pos
+        if (!Session.live) saveProgress(false)
+        showLoading("Sem ligação à Internet — continuo sozinho quando voltar.")
+        PlayLog.add("📵 Sem Internet a meio do vídeo — à espera")
+        handler.postDelayed(netCheck, 3000)
+    }
+
     private fun handleError(error: PlaybackException) {
+        if (Session.live && !networkUp()) { waitForNetwork(0L); return }
         if (Session.live) {
             val cur = if (chStreams.isNotEmpty()) chStreams.getOrNull(chStreamIdx)?.url.orEmpty() else Session.channels.getOrNull(channelIndex)?.url.orEmpty()
             val hdr = chStreams.getOrNull(chStreamIdx)?.headers ?: emptyMap()
@@ -861,6 +907,18 @@ class PlayerActivity : BaseActivity() {
             return
         }
         val pos = player?.currentPosition ?: 0L
+        // Sem Internet: não é culpa da fonte — espera que volte e continua sozinho no mesmo ponto
+        if (!networkUp()) { waitForNetwork(pos); return }
+        // Já estava a tocar e o servidor recusou (link do debrid expirado): uma vez a mesma fonte, com link novo
+        val httpErr = error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+        val nowMs = android.os.SystemClock.elapsedRealtime()
+        if (httpErr && reachedReady && nowMs - sameRetriedAt > 120_000) {
+            sameRetriedAt = nowMs
+            PlayLog.add("🔁 Link recusado a meio — a reabrir a mesma fonte")
+            showLoading("A retomar…")
+            playStream(streamIndex, pos)
+            return
+        }
         val netErr = error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
             error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
         if (netErr && netRetries < 3) {

@@ -26,7 +26,7 @@ import java.io.File
 
 /** Atualização automática a partir do ramo «apk» do repositório GitHub. */
 object Updater {
-    private const val BASE = "https://raw.githubusercontent.com/hortenciojacob/hortencioflix/apk/"
+    private const val BASE = "https://raw.githubusercontent.com/jacobhortencio-droid/hortencioflix-app/apk/"
 
     private fun headers(): Map<String, String> {
         val t = Prefs.str("ghToken")

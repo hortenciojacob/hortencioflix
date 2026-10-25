@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  * modo de programador da própria Roku (http://IP-da-Roku, utilizador «rokudev»).
  */
 object RokuUpdater {
-    private const val BASE = "https://raw.githubusercontent.com/hortenciojacob/hortencioflix/apk/"
+    private const val BASE = "https://raw.githubusercontent.com/jacobhortencio-droid/hortencioflix-app/apk/"
 
     val configured get() = Prefs.str("rokuIp").isNotEmpty() && Prefs.str("rokuPass").isNotEmpty()
 

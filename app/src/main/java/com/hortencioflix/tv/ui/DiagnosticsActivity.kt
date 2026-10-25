@@ -60,7 +60,7 @@ class DiagnosticsActivity : ListScreen() {
             } else rows.add(Row("Conta Stremio", "— não ligada"))
             val tok = Prefs.str("ghToken")
             val up = withContext(Dispatchers.IO) {
-                Http.ping("https://raw.githubusercontent.com/hortenciojacob/hortencioflix/apk/version.txt", if (tok.isEmpty()) emptyMap() else mapOf("Authorization" to "token $tok"))
+                Http.ping("https://raw.githubusercontent.com/jacobhortencio-droid/hortencioflix-app/apk/version.txt", if (tok.isEmpty()) emptyMap() else mapOf("Authorization" to "token $tok"))
             }
             rows.add(Row("Atualizações automáticas", if (up.first == 404) "❌ sem acesso (repositório privado sem token)" else mark(up.first, up.second)))
             rows.add(Row("Guia EPG", if (Epg.isLoaded) "✅ carregado" else "— não carregado (abre uma lista com guia na TV ao vivo)"))
